@@ -46,7 +46,6 @@
           
           <!-- FORMAL CARD (Indigo) -->
           <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] relative overflow-hidden group hover:border-indigo-200 transition-colors">
-            <div class="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div class="flex items-center gap-3 mb-6 relative z-10">
               <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100/50">
                 <SvgIcon name="document" :size="20" />
@@ -85,7 +84,6 @@
 
           <!-- DINIYYAH CARD (Emerald) -->
           <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] relative overflow-hidden group hover:border-emerald-200 transition-colors">
-            <div class="absolute inset-0 bg-gradient-to-br from-emerald-50/50 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div class="flex items-center gap-3 mb-6 relative z-10">
               <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100/50">
                 <SvgIcon name="document" :size="20" />
@@ -124,7 +122,6 @@
 
           <!-- HALAQOH CARD (Amber) -->
           <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] relative overflow-hidden group hover:border-amber-200 transition-colors">
-            <div class="absolute inset-0 bg-gradient-to-br from-amber-50/50 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div class="flex items-center gap-3 mb-6 relative z-10">
               <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100/50">
                 <SvgIcon name="document" :size="20" />
@@ -170,9 +167,6 @@
       <div>
         <h3 class="text-sm font-bold tracking-widest text-gray-500 uppercase mb-4 mt-8">REKAP KEHADIRAN GURU (ANDA)</h3>
         <div class="bg-white border border-gray-100 rounded-3xl p-6 md:p-8 shadow-[0_2px_12px_rgba(0,0,0,0.03)] relative overflow-hidden">
-          
-          <!-- Decorative Glow -->
-          <div class="absolute -right-20 -top-20 w-64 h-64 bg-emerald-50 rounded-full blur-3xl pointer-events-none"></div>
 
           <div class="flex flex-col md:flex-row items-center md:items-start gap-8 relative z-10">
             <!-- Combined Ring -->
@@ -295,38 +289,38 @@
         <!-- AKSI CEPAT & LAPORAN -->
         <div class="space-y-6 flex flex-col h-[500px]">
           <!-- Aksi Cepat Grid -->
-          <div class="bg-gradient-to-br from-indigo-50/50 to-white border border-indigo-100/50 rounded-3xl p-6 shadow-sm flex-1 flex flex-col">
-            <h3 class="text-sm font-bold tracking-widest text-indigo-900/40 uppercase mb-6 shrink-0">AKSI CEPAT</h3>
+          <div class="bg-indigo-50 border border-indigo-100/50 rounded-3xl p-6 shadow-sm flex-1 flex flex-col dark:bg-slate-900 dark:border-slate-700">
+            <h3 class="text-sm font-bold tracking-widest text-indigo-900/40 uppercase mb-6 shrink-0 dark:text-slate-300">AKSI CEPAT</h3>
             
             <div class="grid grid-cols-2 gap-4 flex-1">
               <!-- Siswa -->
-              <router-link :to="{ name: 'students' }" class="bg-white border border-emerald-100 shadow-[0_4px_20px_-4px_rgba(16,185,129,0.1)] hover:shadow-[0_8px_25px_-4px_rgba(16,185,129,0.2)] rounded-2xl p-6 flex flex-col items-center justify-center transition-all group hover:-translate-y-1">
-                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm">
+              <router-link :to="{ name: 'students' }" class="bg-white border border-emerald-100 shadow-[0_4px_20px_-4px_rgba(16,185,129,0.1)] hover:shadow-[0_8px_25px_-4px_rgba(16,185,129,0.2)] rounded-2xl p-6 flex flex-col items-center justify-center transition-all group hover:-translate-y-1 dark:bg-slate-800 dark:border-slate-700 dark:hover:border-emerald-600/50">
+                <div class="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm dark:bg-emerald-900/40 dark:text-emerald-300">
                   <SvgIcon name="user-group" :size="28" />
                 </div>
-                <span class="text-emerald-900 font-bold">Data Santri</span>
+                <span class="text-emerald-900 font-bold dark:text-emerald-200">Data Santri</span>
               </router-link>
               
               <!-- Galeri -->
-              <router-link :to="{ name: 'gallery' }" class="bg-white border border-amber-100 shadow-[0_4px_20px_-4px_rgba(245,158,11,0.1)] hover:shadow-[0_8px_25px_-4px_rgba(245,158,11,0.2)] rounded-2xl p-6 flex flex-col items-center justify-center transition-all group hover:-translate-y-1">
-                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 text-amber-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm">
+              <router-link :to="{ name: 'gallery' }" class="bg-white border border-amber-100 shadow-[0_4px_20px_-4px_rgba(245,158,11,0.1)] hover:shadow-[0_8px_25px_-4px_rgba(245,158,11,0.2)] rounded-2xl p-6 flex flex-col items-center justify-center transition-all group hover:-translate-y-1 dark:bg-slate-800 dark:border-slate-700 dark:hover:border-amber-600/50">
+                <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amber-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm dark:bg-amber-900/40 dark:text-amber-300">
                   <SvgIcon name="photo" :size="28" />
                 </div>
-                <span class="text-amber-900 font-bold">Galeri Foto</span>
+                <span class="text-amber-900 font-bold dark:text-amber-200">Galeri Foto</span>
               </router-link>
 
                <!-- Guru -->
-              <router-link :to="{ name: 'users' }" class="bg-white border border-blue-100 shadow-[0_4px_20px_-4px_rgba(59,130,246,0.1)] hover:shadow-[0_8px_25px_-4px_rgba(59,130,246,0.2)] rounded-2xl p-6 flex flex-col items-center justify-center transition-all group hover:-translate-y-1 col-span-2">
-                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm">
+              <router-link :to="{ name: 'users' }" class="bg-white border border-blue-100 shadow-[0_4px_20px_-4px_rgba(59,130,246,0.1)] hover:shadow-[0_8px_25px_-4px_rgba(59,130,246,0.2)] rounded-2xl p-6 flex flex-col items-center justify-center transition-all group hover:-translate-y-1 col-span-2 dark:bg-slate-800 dark:border-slate-700 dark:hover:border-blue-600/50">
+                <div class="w-14 h-14 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm dark:bg-blue-900/40 dark:text-blue-300">
                   <SvgIcon name="document" :size="28" />
                 </div>
-                <span class="text-blue-900 font-bold">Direktori Guru</span>
+                <span class="text-blue-900 font-bold dark:text-blue-200">Direktori Guru</span>
               </router-link>
             </div>
           </div>
 
           <!-- Laporan Banner -->
-          <div class="bg-gradient-to-r from-primary to-indigo-600 rounded-3xl p-6 shadow-lg shadow-primary/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0 relative overflow-hidden group">
+          <div class="bg-primary rounded-3xl p-6 shadow-lg shadow-primary/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0 relative overflow-hidden group">
              <!-- decorative shape -->
              <div class="absolute right-0 top-0 w-32 h-full bg-white/10 skew-x-12 translate-x-10 group-hover:translate-x-0 transition-transform duration-500 pointer-events-none"></div>
              

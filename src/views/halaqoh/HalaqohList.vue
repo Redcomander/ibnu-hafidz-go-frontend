@@ -16,6 +16,11 @@
           class="input-field text-sm w-auto"
           @change="loadData"
         />
+        <select v-model="selectedGender" class="input-field text-sm w-auto min-w-[170px]">
+          <option value="">Semua (Banin & Banat)</option>
+          <option value="banin">Banin (Putra)</option>
+          <option value="banat">Banat (Putri)</option>
+        </select>
         <button
           v-if="auth.hasPermission('halaqoh-assignments.create')"
           @click="showCreateForm = true"
@@ -43,38 +48,6 @@
         class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
       >
         <SvgIcon name="x" :size="14" />
-      </button>
-    </div>
-
-    <!-- Session Tabs -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-1 flex gap-1">
-      <button
-        v-for="sess in sessions"
-        :key="sess"
-        @click="activeSession = sess"
-        :class="[
-          'flex-1 px-2 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 min-w-0',
-          activeSession === sess
-            ? sessionStyles[sess].tabActive
-            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50',
-        ]"
-      >
-        <span class="flex items-center gap-1 text-xs sm:text-sm">
-          {{ sess }}
-          <span
-            v-if="isSessionActive(sess)"
-            class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"
-            title="Sesi sedang berlangsung"
-          ></span>
-        </span>
-        <span
-          :class="[
-            'text-[9px] sm:text-xs px-1.5 py-0.5 rounded-full leading-tight whitespace-nowrap',
-            activeSession === sess ? 'bg-white/20' : 'bg-gray-100',
-          ]"
-        >
-          {{ getSessionTimeLabel(sess) }}
-        </span>
       </button>
     </div>
 
@@ -112,7 +85,7 @@
         class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
       >
         <!-- Teacher Header -->
-        <div class="bg-gradient-to-r from-emerald-500 to-teal-600 px-4 sm:px-5 py-3 sm:py-4 text-white">
+        <div class="bg-primary-dark px-4 sm:px-5 py-3 sm:py-4 text-white">
           <!-- Teacher Name + Info -->
           <div class="flex items-start gap-3">
             <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-base flex-shrink-0">
@@ -267,7 +240,7 @@
         </div>
 
         <!-- Student List -->
-        <div class="p-3 sm:p-4 space-y-1.5 sm:space-y-2">
+        <div class="p-3 sm:p-4 space-y-1.5 sm:space-y-2 max-h-[360px] overflow-y-auto pr-1 custom-scrollbar">
           <div
             v-for="assignment in group.assignments"
             :key="assignment.id"
@@ -416,6 +389,7 @@ const toast = useToastStore()
 const sessions = ['Shubuh', 'Ashar', 'Isya']
 const activeSession = ref('Shubuh')
 const selectedDate = ref(new Date().toISOString().slice(0, 10))
+const selectedGender = ref('')
 const rawSearch = ref('')
 const searchQuery = ref('')
 let debounceTimer = null
@@ -431,14 +405,38 @@ onUnmounted(() => clearTimeout(debounceTimer))
 
 const filteredGroups = computed(() => {
   const q = searchQuery.value.toLowerCase()
-  if (!q) return store.groups
-  return store.groups.filter((group) => {
+  const gender = selectedGender.value
+
+  return (store.groups || []).map((group) => {
+    const assignments = (group.assignments || []).filter((a) => {
+      if (!gender) return true
+      return classifyGender(a.student?.jenis_kelamin) === gender
+    })
+
+    return {
+      ...group,
+      assignments,
+    }
+  }).filter((group) => {
+    if (!group.assignments.length) return false
+    if (!q) return true
     if (group.teacher_name?.toLowerCase().includes(q)) return true
-    return group.assignments?.some((a) =>
-      (a.student?.nama_lengkap || '').toLowerCase().includes(q)
+    return group.assignments.some((a) =>
+      (a.student?.nama_lengkap || '').toLowerCase().includes(q),
     )
   })
 })
+
+function classifyGender(rawGender) {
+  const normalized = String(rawGender || '').trim().toLowerCase()
+  if (normalized === 'laki-laki' || normalized === 'laki laki' || normalized === 'putra' || normalized === 'banin') {
+    return 'banin'
+  }
+  if (normalized === 'perempuan' || normalized === 'putri' || normalized === 'banat') {
+    return 'banat'
+  }
+  return ''
+}
 
 const sessionStyles = {
   Shubuh: {
@@ -550,18 +548,6 @@ function getAccessInfo(teacherId) {
 function getHelperName(group) {
   const first = group.assignments?.[0]
   return first?.helper_teacher?.name || null
-}
-
-function getSessionTimeLabel(sess) {
-  const st = store.sessionTimes?.find((s) => s.session === sess)
-  if (st) return `${st.start} - ${st.end}`
-  const fallback = { Shubuh: '04:30 - 06:45', Ashar: '15:30 - 17:30', Isya: '19:45 - 22:15' }
-  return fallback[sess] || ''
-}
-
-function isSessionActive(sess) {
-  const st = store.sessionTimes?.find((s) => s.session === sess)
-  return st?.is_active || false
 }
 
 // ── Actions ──

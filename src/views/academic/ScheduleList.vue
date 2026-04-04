@@ -218,13 +218,13 @@ const getTimeDisplay = (item) => {
 };
 
 const dayColors = {
-    'Senin':  { header: 'bg-blue-600',    card: 'border-l-blue-500',  badge: 'bg-blue-50 text-blue-700 border-blue-200' },
-    'Selasa': { header: 'bg-emerald-600', card: 'border-l-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-    'Rabu':   { header: 'bg-violet-600',  card: 'border-l-violet-500', badge: 'bg-violet-50 text-violet-700 border-violet-200' },
-    'Kamis':  { header: 'bg-amber-600',   card: 'border-l-amber-500', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
-    'Jumat':  { header: 'bg-teal-600',    card: 'border-l-teal-500',  badge: 'bg-teal-50 text-teal-700 border-teal-200' },
-    'Sabtu':  { header: 'bg-rose-600',    card: 'border-l-rose-500',  badge: 'bg-rose-50 text-rose-700 border-rose-200' },
-    'Ahad':   { header: 'bg-slate-600',   card: 'border-l-slate-500', badge: 'bg-slate-50 text-slate-700 border-slate-200' },
+    'Senin':  { header: 'bg-blue-600',    card: 'border-l-blue-500',  badge: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-700/50' },
+    'Selasa': { header: 'bg-emerald-600', card: 'border-l-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200 dark:border-emerald-700/50' },
+    'Rabu':   { header: 'bg-violet-600',  card: 'border-l-violet-500', badge: 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-200 dark:border-violet-700/50' },
+    'Kamis':  { header: 'bg-amber-600',   card: 'border-l-amber-500', badge: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-700/50' },
+    'Jumat':  { header: 'bg-teal-600',    card: 'border-l-teal-500',  badge: 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-200 dark:border-teal-700/50' },
+    'Sabtu':  { header: 'bg-rose-600',    card: 'border-l-rose-500',  badge: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-200 dark:border-rose-700/50' },
+    'Ahad':   { header: 'bg-slate-600',   card: 'border-l-slate-500', badge: 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600/60' },
 };
 const dc = (d) => dayColors[d] || dayColors['Senin'];
 </script>
@@ -381,14 +381,14 @@ const dc = (d) => dayColors[d] || dayColors['Senin'];
                             <!-- ✅ ATTENDANCE STATUS BADGES — always visible -->
                             <div v-if="item.has_attendance_today || item.has_teacher_attendance_today" class="flex flex-wrap gap-1.5 mb-2">
                                 <span v-if="item.has_attendance_today"
-                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700 border border-green-300 cursor-pointer hover:bg-green-200 transition"
+                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700 border border-green-300 cursor-pointer hover:bg-green-200 transition dark:bg-green-900/30 dark:text-green-200 dark:border-green-700/50 dark:hover:bg-green-900/50"
                                     @click="toggleDetails(item.id)">
                                     <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
                                     Santri ✓
                                     <svg class="w-3 h-3 ml-1 transition-transform" :class="{'rotate-180': expandedItems.includes(item.id)}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                                 </span>
                                 <span v-if="item.has_teacher_attendance_today"
-                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-300">
+                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-700/50">
                                     <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
                                     Guru ✓
                                 </span>
@@ -396,11 +396,11 @@ const dc = (d) => dayColors[d] || dayColors['Senin'];
 
                             <!-- Expanded attendance counts -->
                             <div v-if="item.has_attendance_today && expandedItems.includes(item.id)"
-                                class="grid grid-cols-2 gap-1.5 p-2 rounded bg-green-50 border border-green-200 text-xs mb-2">
-                                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Hadir <strong class="ml-auto text-green-700">{{ item.attendance_counts?.hadir || 0 }}</strong></span>
-                                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span> Sakit <strong class="ml-auto text-yellow-700">{{ item.attendance_counts?.sakit || 0 }}</strong></span>
-                                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Izin <strong class="ml-auto text-blue-700">{{ item.attendance_counts?.izin || 0 }}</strong></span>
-                                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Alpha <strong class="ml-auto text-red-700">{{ item.attendance_counts?.alpa || 0 }}</strong></span>
+                                class="grid grid-cols-2 gap-1.5 p-2 rounded bg-green-50 border border-green-200 text-xs mb-2 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-200">
+                                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Hadir <strong class="ml-auto text-green-700 dark:text-green-300">{{ item.attendance_counts?.hadir || 0 }}</strong></span>
+                                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span> Sakit <strong class="ml-auto text-yellow-700 dark:text-yellow-300">{{ item.attendance_counts?.sakit || 0 }}</strong></span>
+                                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Izin <strong class="ml-auto text-blue-700 dark:text-blue-300">{{ item.attendance_counts?.izin || 0 }}</strong></span>
+                                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Alpha <strong class="ml-auto text-red-700 dark:text-red-300">{{ item.attendance_counts?.alpa || 0 }}</strong></span>
                             </div>
 
                             <!-- Actions -->

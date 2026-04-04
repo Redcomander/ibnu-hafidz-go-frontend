@@ -227,7 +227,7 @@
       <!-- Page Content -->
       <main class="p-4 md:p-6">
         <router-view v-slot="{ Component }">
-          <transition name="page" mode="out-in">
+          <transition name="page">
             <component :is="Component" />
           </transition>
         </router-view>

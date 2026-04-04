@@ -128,7 +128,6 @@ import { computed, reactive, ref, onMounted } from 'vue';
 import api from '@/api';
 import { useAuthStore } from '@/stores/auth';
 import { useToastStore } from '@/stores/toast';
-import { normalizePublicMediaUrl } from '@/utils/mediaUrl';
 
 const auth = useAuthStore();
 const toast = useToastStore();
@@ -161,8 +160,23 @@ const fillFromAuth = () => {
 const avatarPreviewUrl = computed(() => {
   const raw = auth.user?.foto_guru;
   if (!raw) return '';
-  const baseUrl = normalizePublicMediaUrl(raw, '');
-  if (!baseUrl) return '';
+
+  const value = String(raw).trim();
+  if (!value) return '';
+
+  let baseUrl = '';
+  if (/^https?:\/\//i.test(value) || value.startsWith('data:') || value.startsWith('blob:')) {
+    baseUrl = value;
+  } else if (value.startsWith('/uploads/')) {
+    baseUrl = value;
+  } else if (value.startsWith('uploads/')) {
+    baseUrl = `/${value}`;
+  } else if (value.startsWith('/')) {
+    baseUrl = `/uploads/${value.replace(/^\/+/, '')}`;
+  } else {
+    baseUrl = `/uploads/${value.replace(/^\/+/, '')}`;
+  }
+
   return `${baseUrl}?v=${avatarVersion.value}`;
 });
 

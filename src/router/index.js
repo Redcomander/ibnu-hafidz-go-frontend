@@ -308,17 +308,30 @@ const router = createRouter({
   routes,
 })
 
-// Track whether we've already tried to restore the session
-let refreshAttempted = false
+// Allow refresh retries with a short cooldown to avoid redirect loops
+let refreshPromise = null
+let lastRefreshAttemptAt = 0
+const REFRESH_COOLDOWN_MS = 15000
 
 // Navigation guard — auth + permission checking
 router.beforeEach(async (to, from, next) => {
   const auth = useAuthStore()
 
-  // Try to restore session ONCE on first load (not on every navigation)
-  if (!refreshAttempted && !auth.isAuthenticated && !to.meta.guest) {
-    refreshAttempted = true
-    await auth.tryRefresh()
+  // Try to restore session when required, but throttle attempts.
+  if (!auth.isAuthenticated && !to.meta.guest) {
+    const now = Date.now()
+    const canRetry = now-lastRefreshAttemptAt >= REFRESH_COOLDOWN_MS
+
+    if (!refreshPromise && canRetry) {
+      lastRefreshAttemptAt = now
+      refreshPromise = auth.tryRefresh().finally(() => {
+        refreshPromise = null
+      })
+    }
+
+    if (refreshPromise) {
+      await refreshPromise
+    }
   }
 
   // Guest-only pages (login) — redirect to dashboard if already authenticated

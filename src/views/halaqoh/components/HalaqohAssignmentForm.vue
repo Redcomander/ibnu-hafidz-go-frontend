@@ -64,7 +64,7 @@
               <label
                 v-for="s in filteredStudents"
                 :key="s.id"
-                class="flex items-center gap-3 px-3 py-2 hover:bg-emerald-50 cursor-pointer transition-colors"
+                class="student-option flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer transition-colors"
               >
                 <input
                   type="checkbox"
@@ -196,3 +196,9 @@ async function save() {
   }
 }
 </script>
+
+<style scoped>
+[data-theme="dark"] .student-option:hover {
+  background-color: #1f2937 !important;
+}
+</style>
