@@ -194,7 +194,7 @@ const form = reactive({
 
 const isSuperAdmin = computed(() => auth.userRoles?.some((role) => role.name === 'super_admin'));
 const isSidebarSettingsPage = computed(() => route.name === 'sidebar-menu-settings');
-const showSidebarSettings = computed(() => isSuperAdmin.value);
+const showSidebarSettings = computed(() => isSidebarSettingsPage.value && isSuperAdmin.value);
 const pageTitle = computed(() => isSidebarSettingsPage.value ? 'Pengaturan Sidebar' : 'Pengaturan Profil');
 const pageDescription = computed(() => {
   if (isSidebarSettingsPage.value) {

@@ -318,7 +318,7 @@ const routes = [
         path: 'sidebar-menu-settings',
         name: 'sidebar-menu-settings',
         component: () => import('@/views/settings/SettingsView.vue'),
-        meta: { title: 'Pengaturan Sidebar' },
+        meta: { title: 'Pengaturan Sidebar', roles: ['super_admin'] },
       },
       {
         path: 'kelas/:id',
@@ -389,6 +389,14 @@ router.beforeEach(async (to, from, next) => {
   // Permission check
   if (to.meta.permission && !auth.hasPermission(to.meta.permission)) {
     return next({ name: 'dashboard' }) // Redirect to dashboard if no permission
+  }
+
+  // Role check (if route requires specific role)
+  if (to.meta.roles && Array.isArray(to.meta.roles) && to.meta.roles.length > 0) {
+    const hasRequiredRole = (auth.userRoles || []).some((role) => to.meta.roles.includes(role.name))
+    if (!hasRequiredRole) {
+      return next({ name: 'dashboard' })
+    }
   }
 
   applySeoMetadata(
