@@ -17,6 +17,12 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${auth.accessToken}`
   }
 
+  // Hindari data GET stale dari cache browser/proxy.
+  if ((config.method || 'get').toLowerCase() === 'get') {
+    config.headers['Cache-Control'] = 'no-cache'
+    config.headers.Pragma = 'no-cache'
+  }
+
   // Let browser set multipart boundary automatically for FormData.
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type']
