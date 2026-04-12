@@ -1,0 +1,11 @@
+RewriteEngine On
+
+# Proxy request API ke proses backend (ubah port bila diperlukan)
+RewriteCond %{REQUEST_URI} ^/api/ [OR]
+RewriteCond %{REQUEST_URI} ^/uploads/
+RewriteRule ^(api|uploads)/(.*)$ http://127.0.0.1:18080/$1/$2 [P,L]
+
+# Fallback SPA Vite
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.html [L]
