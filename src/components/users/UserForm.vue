@@ -96,6 +96,29 @@
             </div>
           </div>
 
+          <!-- Password Confirmation (when changing password) -->
+          <div v-if="form.password">
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Konfirmasi Password
+            </label>
+            <div class="relative">
+              <input
+                v-model="form.password_confirmation"
+                :type="showPasswordConfirmation ? 'text' : 'password'"
+                class="input-field pr-10"
+                placeholder="Ulangi password"
+                minlength="6"
+              />
+              <button
+                type="button"
+                @click="showPasswordConfirmation = !showPasswordConfirmation"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <SvgIcon :name="showPasswordConfirmation ? 'eye-off' : 'eye'" :size="18" />
+              </button>
+            </div>
+          </div>
+
           <!-- Roles -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1"
@@ -184,12 +207,14 @@ const loading = ref(false);
 const loadingRoles = ref(false);
 const availableRoles = ref([]);
 const showPassword = ref(false);
+const showPasswordConfirmation = ref(false);
 
 const form = ref({
   name: "",
   username: "",
   email: "",
   password: "",
+  password_confirmation: "",
   role_ids: [],
 });
 
@@ -233,6 +258,7 @@ watch(
           username: props.user.username,
           email: props.user.email,
           password: "", // Don't fill password
+          password_confirmation: "",
           role_ids: props.user.roles ? props.user.roles.map((r) => r.id) : [],
         };
       } else {
@@ -242,10 +268,12 @@ watch(
           username: "",
           email: "",
           password: "",
+          password_confirmation: "",
           role_ids: [],
         };
       }
       showPassword.value = false;
+      showPasswordConfirmation.value = false;
     }
   },
 );
@@ -268,13 +296,20 @@ async function save() {
     toast.error("Password minimal 6 karakter.");
     return;
   }
+  if (form.value.password && form.value.password !== form.value.password_confirmation) {
+    toast.error("Konfirmasi password tidak sama.");
+    return;
+  }
 
   loading.value = true;
   try {
     const payload = { ...form.value };
 
     // Clean payload
-    if (!payload.password) delete payload.password;
+    if (!payload.password) {
+      delete payload.password;
+      delete payload.password_confirmation;
+    }
 
     if (isEdit.value) {
       await api.put(`/users/${props.user.id}`, payload);
