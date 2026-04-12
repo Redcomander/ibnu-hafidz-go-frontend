@@ -85,6 +85,14 @@ echo "[deploy] Menginstal dependensi frontend..."
 echo "[deploy] Sedang build frontend..."
 "$NPM_BIN" run build
 
+if [[ "$(realpath "$PUBLISH_DIR")" == "$(realpath "$REPO_ROOT")" || \
+      "$(realpath "$PUBLISH_DIR")" == "$(realpath "$REPO_ROOT/dist")" ]]; then
+  echo "[deploy] ERROR: CPANEL_FRONTEND_PUBLISH_DIR tidak boleh mengarah ke folder repo itu sendiri."
+  echo "[deploy] Sekarang: $PUBLISH_DIR"
+  echo "[deploy] Gunakan path lain, misal: export CPANEL_FRONTEND_PUBLISH_DIR=\$HOME/public_html/beta"
+  exit 1
+fi
+
 echo "[deploy] Mem-publish folder dist ke $PUBLISH_DIR"
 mkdir -p "$PUBLISH_DIR"
 if command -v rsync >/dev/null 2>&1; then
