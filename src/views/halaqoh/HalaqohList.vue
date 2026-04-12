@@ -212,6 +212,7 @@
               Absen Santri
             </button>
             <button
+              v-if="getAccessInfo(group.teacher_id)?.can_manage"
               @click="openTeacherAttendance(group)"
               class="flex-1 min-w-[100px] text-xs bg-white/15 hover:bg-white/25 text-white px-2.5 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1"
             >
