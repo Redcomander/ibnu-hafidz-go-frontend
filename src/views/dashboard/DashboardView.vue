@@ -247,7 +247,7 @@
           </div>
 
           <div v-if="visiblePersonalSchedules.length" class="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4">
-            <div v-for="s in visiblePersonalSchedules" :key="s.id" class="flex gap-4 group/item">
+            <div v-for="s in visiblePersonalSchedules" :key="s._dashboardKey" class="flex gap-4 group/item">
               <!-- Timeline Line & Dot -->
               <div class="flex flex-col items-center">
                 <div class="w-3 h-3 rounded-full bg-blue-500 ring-4 ring-blue-50 z-10 flex-shrink-0 mt-3"></div>
@@ -259,8 +259,13 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <div class="flex items-center gap-2 mb-1.5">
-                      <h4 class="text-base font-bold text-gray-900">{{ s.assignment?.lesson?.name || s.assignment?.subject?.name || '-' }}</h4>
-                      <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">Formal</span>
+                      <h4 class="text-base font-bold text-gray-900">{{ s.assignment?.lesson?.name || s.assignment?.diniyyah_lesson?.name || s.assignment?.subject?.name || '-' }}</h4>
+                      <span
+                        class="px-2 py-0.5 rounded-md text-[10px] font-bold border"
+                        :class="s._dashboardType === 'diniyyah' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-indigo-50 text-indigo-600 border-indigo-100'"
+                      >
+                        {{ s._dashboardType === 'diniyyah' ? 'Diniyyah' : 'Formal' }}
+                      </span>
                     </div>
                     <div class="text-sm font-medium text-gray-600 mb-2">{{ s.assignment?.kelas?.nama || '-' }} {{ s.assignment?.kelas?.tingkat || '-' }}</div>
                     
@@ -348,7 +353,7 @@
   <AttendanceForm 
     :show="showAttendanceForm" 
     :schedule="currentSchedule" 
-    type="formal" 
+    :type="currentScheduleType" 
     :date="todayDateStr"
     @close="showAttendanceForm = false; currentSchedule = null" 
     @updated="fetchStats" 
@@ -438,7 +443,23 @@ const fetchStats = async () => {
 };
 
 const visiblePersonalSchedules = computed(() => {
-  const list = stats.value?.teacher?.personal_schedule || [];
+  const formal = (stats.value?.teacher?.personal_schedule || []).map((s) => ({
+    ...s,
+    _dashboardType: 'formal',
+    _dashboardKey: `formal-${s.id}`,
+  }));
+  const diniyyah = (stats.value?.teacher?.personal_diniyyah_schedule || []).map((s) => ({
+    ...s,
+    _dashboardType: 'diniyyah',
+    _dashboardKey: `diniyyah-${s.id}`,
+  }));
+
+  const list = [...formal, ...diniyyah].sort((a, b) => {
+    const aTime = (a?.start_time || '').slice(0, 5);
+    const bTime = (b?.start_time || '').slice(0, 5);
+    return aTime.localeCompare(bTime);
+  });
+
   if (ramadhanEnabled.value) return list;
 
   return list.filter((s) => {
@@ -453,6 +474,8 @@ const visiblePersonalSchedules = computed(() => {
     return !/(ramadhan|ramadan|romadhon|romadon)/.test(haystack);
   });
 });
+
+const currentScheduleType = computed(() => currentSchedule.value?._dashboardType || 'formal');
 
 onMounted(() => {
   fetchStats();
