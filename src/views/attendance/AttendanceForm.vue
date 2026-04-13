@@ -38,8 +38,8 @@
         </div>
 
         <!-- Student List -->
-        <div class="border rounded-lg overflow-hidden">
-            <table class="w-full text-sm text-left">
+        <div class="border rounded-lg overflow-hidden overflow-x-auto">
+            <table class="w-full min-w-[760px] text-sm text-left">
                 <thead class="bg-gray-50 text-gray-700 uppercase font-medium">
                     <tr>
                         <th class="px-4 py-3 w-10">No</th>
@@ -56,7 +56,15 @@
                             <p class="text-xs text-gray-400">{{ student.nis }}</p>
                         </td>
                         <td class="px-4 py-3">
-                            <div class="flex justify-center gap-1 bg-gray-100 p-1 rounded-lg w-fit mx-auto">
+                            <div class="md:hidden">
+                                <select v-model="student.status" class="input-field py-1.5 px-2 text-xs w-full min-w-[110px] capitalize">
+                                    <option value="hadir">Hadir</option>
+                                    <option value="izin">Izin</option>
+                                    <option value="sakit">Sakit</option>
+                                    <option value="alpa">Alpa</option>
+                                </select>
+                            </div>
+                            <div class="hidden md:flex justify-center gap-1 bg-gray-100 p-1 rounded-lg w-fit mx-auto">
                                 <button 
                                     v-for="status in ['hadir', 'izin', 'sakit', 'alpa']" 
                                     :key="status"

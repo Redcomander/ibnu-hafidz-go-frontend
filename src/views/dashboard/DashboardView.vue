@@ -187,15 +187,37 @@
                     <p class="text-sm text-gray-500 font-medium">Kehadiran Gabungan (Formal + Diniyyah + Halaqoh)</p>
                  </div>
                  
-                 <!-- Subtle breakdown string pill -->
-                 <div class="bg-gray-50 border border-gray-200 rounded-xl py-2 px-3 inline-flex items-center gap-3 self-start">
-                   <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Formal</span>
-                   <div class="text-xs space-x-2 font-mono bg-white rounded-md px-2 py-1 border border-gray-100">
-                     <span class="text-emerald-600" title="Hadir">H:{{ stats.teacher?.formal_stats?.hadir || 0 }}</span>
-                     <span class="text-blue-600" title="Izin">I:{{ stats.teacher?.formal_stats?.izin || 0 }}</span>
-                     <span class="text-amber-600" title="Sakit">S:{{ stats.teacher?.formal_stats?.sakit || 0 }}</span>
-                     <span class="text-red-600" title="Alpha">A:{{ stats.teacher?.formal_stats?.alpha || 0 }}</span>
-                     <span class="text-purple-600" title="Pengganti">P:{{ stats.teacher?.formal_stats?.pengganti || 0 }}</span>
+                 <!-- Breakdown by type -->
+                 <div class="flex flex-wrap items-center gap-2 self-start">
+                   <div class="bg-gray-50 border border-gray-200 rounded-xl py-2 px-3 inline-flex items-center gap-2">
+                     <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Formal</span>
+                     <div class="text-xs space-x-2 font-mono bg-white rounded-md px-2 py-1 border border-gray-100">
+                       <span class="text-emerald-600" title="Hadir">H:{{ stats.teacher?.formal_stats?.hadir || 0 }}</span>
+                       <span class="text-blue-600" title="Izin">I:{{ stats.teacher?.formal_stats?.izin || 0 }}</span>
+                       <span class="text-amber-600" title="Sakit">S:{{ stats.teacher?.formal_stats?.sakit || 0 }}</span>
+                       <span class="text-red-600" title="Alpha">A:{{ stats.teacher?.formal_stats?.alpha || 0 }}</span>
+                       <span class="text-purple-600" title="Pengganti">P:{{ stats.teacher?.formal_stats?.pengganti || 0 }}</span>
+                     </div>
+                   </div>
+                   <div class="bg-gray-50 border border-gray-200 rounded-xl py-2 px-3 inline-flex items-center gap-2">
+                     <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Diniyyah</span>
+                     <div class="text-xs space-x-2 font-mono bg-white rounded-md px-2 py-1 border border-gray-100">
+                       <span class="text-emerald-600" title="Hadir">H:{{ stats.teacher?.diniyyah_stats?.hadir || 0 }}</span>
+                       <span class="text-blue-600" title="Izin">I:{{ stats.teacher?.diniyyah_stats?.izin || 0 }}</span>
+                       <span class="text-amber-600" title="Sakit">S:{{ stats.teacher?.diniyyah_stats?.sakit || 0 }}</span>
+                       <span class="text-red-600" title="Alpha">A:{{ stats.teacher?.diniyyah_stats?.alpha || 0 }}</span>
+                       <span class="text-purple-600" title="Pengganti">P:{{ stats.teacher?.diniyyah_stats?.pengganti || 0 }}</span>
+                     </div>
+                   </div>
+                   <div class="bg-gray-50 border border-gray-200 rounded-xl py-2 px-3 inline-flex items-center gap-2">
+                     <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Halaqoh</span>
+                     <div class="text-xs space-x-2 font-mono bg-white rounded-md px-2 py-1 border border-gray-100">
+                       <span class="text-emerald-600" title="Hadir">H:{{ stats.teacher?.halaqoh_stats?.hadir || 0 }}</span>
+                       <span class="text-blue-600" title="Izin">I:{{ stats.teacher?.halaqoh_stats?.izin || 0 }}</span>
+                       <span class="text-amber-600" title="Sakit">S:{{ stats.teacher?.halaqoh_stats?.sakit || 0 }}</span>
+                       <span class="text-red-600" title="Alpha">A:{{ stats.teacher?.halaqoh_stats?.alpha || 0 }}</span>
+                       <span class="text-purple-600" title="Pengganti">P:{{ stats.teacher?.halaqoh_stats?.pengganti || 0 }}</span>
+                     </div>
                    </div>
                  </div>
               </div>
