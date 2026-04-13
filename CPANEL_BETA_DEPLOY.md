@@ -23,6 +23,38 @@ Di cPanel, buka **Git Version Control** lalu clone kedua repo dari GitHub:
 
 Set keduanya ke branch beta.
 
+## 2b) Guide pull update terbaru di cPanel
+
+Setiap ada perubahan baru di GitHub, lakukan pull dulu sebelum deploy.
+
+### Opsi A - lewat cPanel Git UI (paling aman)
+
+1. Buka **cPanel > Git Version Control**.
+2. Pilih repository backend atau frontend.
+3. Klik **Manage**.
+4. Klik **Pull or Deploy** lalu jalankan **Update from Remote** (nama tombol bisa berbeda tergantung versi cPanel).
+5. Pastikan branch yang aktif adalah branch beta Anda.
+6. Setelah pull sukses, lanjutkan **Deploy HEAD Commit**.
+
+### Opsi B - lewat cPanel Terminal
+
+Masuk ke folder repo yang sudah di-clone, lalu jalankan:
+
+```bash
+git status
+git branch --show-current
+git pull origin <nama-branch-beta>
+```
+
+Contoh:
+
+```bash
+cd ~/repositories/ibnu-hafidz-vue-frontend
+git pull origin main
+```
+
+Jika `git pull` gagal karena ada perubahan lokal, selesaikan dulu perubahan tersebut (commit/stash/revert) lalu ulangi `git pull`.
+
 ## 3) Setup sekali untuk backend (Go API)
 
 Jalankan di cPanel Terminal pada root repo backend:
