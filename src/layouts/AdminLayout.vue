@@ -447,7 +447,7 @@ const navItems = [
     icon: "attendance",
     label: "Riwayat Absensi Diniyyah",
     permission: "absensi_diniyyah.view",
-    activeOn: ["/dashboard/absensi-diniyyah"],
+    activeOn: ["/dashboard/absensi-diniyyah/statistik"],
     menuKey: 'absensi_diniyyah_history',
   },
   {
