@@ -21,12 +21,14 @@
           <!-- Teacher Select -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Guru Pengampu</label>
-            <select v-model="form.user_id" class="input-field" required>
-              <option value="">-- Pilih Guru --</option>
-              <option v-for="t in teachers" :key="t.id" :value="t.id">
-                {{ t.name }}
-              </option>
-            </select>
+            <SearchableSelect
+              v-model="form.user_id"
+              :options="teachers"
+              placeholder="-- Pilih Guru --"
+              label-key="name"
+              value-key="id"
+              :search-debounce="300"
+            />
           </div>
 
           <!-- Helper Teacher (optional) -->
@@ -35,16 +37,14 @@
               Guru Pembantu
               <span class="text-gray-400 font-normal">(opsional)</span>
             </label>
-            <select v-model="form.helper_teacher_id" class="input-field">
-              <option :value="null">-- Tidak Ada --</option>
-              <option
-                v-for="t in teachers.filter(t => t.id !== form.user_id)"
-                :key="t.id"
-                :value="t.id"
-              >
-                {{ t.name }}
-              </option>
-            </select>
+            <SearchableSelect
+              v-model="form.helper_teacher_id"
+              :options="helperTeacherOptions"
+              placeholder="-- Tidak Ada --"
+              label-key="name"
+              value-key="id"
+              :search-debounce="300"
+            />
           </div>
 
           <!-- Student Multi-select -->
@@ -110,10 +110,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useHalaqohStore } from '@/stores/halaqoh'
 import { useToastStore } from '@/stores/toast'
 import api from '@/api'
+import SearchableSelect from '@/components/ui/SearchableSelect.vue'
 
 const props = defineProps({
   editingGroup: { type: Object, default: null },
@@ -129,7 +130,9 @@ const teachers = ref([])
 const allStudents = ref([])
 const assignedStudentIds = ref(new Set())
 const studentSearch = ref('')
+const debouncedStudentSearch = ref('')
 const saving = ref(false)
+let studentSearchTimer = null
 
 const form = ref({
   user_id: '',
@@ -138,10 +141,24 @@ const form = ref({
 })
 
 const filteredStudents = computed(() => {
-  const q = studentSearch.value.toLowerCase()
+  const q = debouncedStudentSearch.value.toLowerCase()
   return allStudents.value.filter(
     (s) => (s.nama_lengkap || s.name || '').toLowerCase().includes(q)
   )
+})
+
+const helperTeacherOptions = computed(() => {
+  const options = [{ id: null, name: '-- Tidak Ada --' }]
+  return options.concat(teachers.value.filter((t) => t.id !== form.value.user_id))
+})
+
+watch(studentSearch, (value) => {
+  if (studentSearchTimer) {
+    clearTimeout(studentSearchTimer)
+  }
+  studentSearchTimer = setTimeout(() => {
+    debouncedStudentSearch.value = value
+  }, 300)
 })
 
 function isAssigned(studentId) {

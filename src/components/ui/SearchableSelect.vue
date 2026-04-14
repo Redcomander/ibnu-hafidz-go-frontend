@@ -101,17 +101,23 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  searchDebounce: {
+    type: Number,
+    default: 250,
+  },
 })
 
 const emit = defineEmits(['update:modelValue'])
 
 const isOpen = ref(false)
 const searchQuery = ref('')
+const debouncedSearchQuery = ref('')
 const container = ref(null)
 const dropdownRef = ref(null)
 const searchInput = ref(null)
 const dropdownStyle = ref({})
 const listStyle = ref({ maxHeight: '240px' })
+let searchDebounceTimer = null
 
 function getLabel(opt) {
   if (!opt) return ''
@@ -126,8 +132,8 @@ function getValue(opt) {
 const selectedOption = computed(() => props.options.find((opt) => getValue(opt) === props.modelValue))
 
 const filteredOptions = computed(() => {
-  if (!searchQuery.value) return props.options
-  const query = searchQuery.value.toLowerCase()
+  if (!debouncedSearchQuery.value) return props.options
+  const query = debouncedSearchQuery.value.toLowerCase()
   return props.options.filter((opt) => String(getLabel(opt)).toLowerCase().includes(query))
 })
 
@@ -158,6 +164,7 @@ function open() {
   if (props.disabled) return
   isOpen.value = true
   searchQuery.value = ''
+  debouncedSearchQuery.value = ''
   updatePosition()
   nextTick(() => searchInput.value?.focus())
 }
@@ -197,6 +204,15 @@ watch(() => props.disabled, (disabled) => {
   if (disabled) close()
 })
 
+watch(searchQuery, (value) => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+  }
+  searchDebounceTimer = setTimeout(() => {
+    debouncedSearchQuery.value = value
+  }, props.searchDebounce)
+})
+
 watch(() => props.options, () => {
   if (isOpen.value) {
     nextTick(updatePosition)
@@ -210,6 +226,9 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+  }
   window.removeEventListener('click', handleWindowClick)
   window.removeEventListener('resize', handleViewportChange)
   window.removeEventListener('scroll', handleViewportChange, true)

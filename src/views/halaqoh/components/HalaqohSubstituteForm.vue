@@ -19,16 +19,14 @@
           <!-- Substitute Teacher -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Guru Pengganti</label>
-            <select v-model="form.substitute_teacher_id" class="input-field" required>
-              <option value="">-- Pilih Guru --</option>
-              <option
-                v-for="t in teachers"
-                :key="t.id"
-                :value="t.id"
-              >
-                {{ t.name }}
-              </option>
-            </select>
+            <SearchableSelect
+              v-model="form.substitute_teacher_id"
+              :options="teachers"
+              placeholder="-- Pilih Guru --"
+              label-key="name"
+              value-key="id"
+              :search-debounce="300"
+            />
           </div>
 
           <!-- Date -->
@@ -111,6 +109,7 @@ import { ref, onMounted } from 'vue'
 import { useHalaqohStore } from '@/stores/halaqoh'
 import { useToastStore } from '@/stores/toast'
 import api from '@/api'
+import SearchableSelect from '@/components/ui/SearchableSelect.vue'
 
 const props = defineProps({
   group: { type: Object, required: true },
