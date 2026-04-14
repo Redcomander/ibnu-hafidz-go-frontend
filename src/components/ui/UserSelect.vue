@@ -65,6 +65,10 @@ const debounce = (fn, delay) => {
 
 const props = defineProps({
   modelValue: [String, Number],
+  endpoint: {
+    type: String,
+    default: '/users'
+  },
   placeholder: {
     type: String,
     default: 'Cari pengguna...'
@@ -95,10 +99,10 @@ watch(() => props.modelValue, (val) => {
 const fetchUsers = async (query = '') => {
     loading.value = true;
     try {
-        const params = { page: 1, limit: 20 };
+    const params = { page: 1, per_page: 20 };
         if (query) params.search = query;
         
-        const res = await api.get('/users', { params });
+    const res = await api.get(props.endpoint, { params });
         users.value = res.data.data;
     } catch (e) {
         console.error(e);

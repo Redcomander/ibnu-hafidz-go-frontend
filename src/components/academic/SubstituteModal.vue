@@ -13,6 +13,7 @@
                 <label class="block text-sm font-medium text-gray-700 mb-1">Guru Pengganti</label>
                 <UserSelect 
                     v-model="form.substitute_teacher_id" 
+                    endpoint="/attendance/assignable-teachers"
                     :initial-label="initialSubstituteName"
                     placeholder="Cari nama guru / staff..."
                     @select="handleUserSelect"
