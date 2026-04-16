@@ -144,13 +144,13 @@ const routes = [
         path: 'jadwal-formal',
         name: 'schedule-formal',
         component: () => import('@/views/academic/ScheduleList.vue'),
-        meta: { permission: 'jadwal_formal.view', title: 'Jadwal Formal' },
+        meta: { title: 'Jadwal Formal' },
       },
       {
         path: 'jadwal-ramadhan',
         name: 'schedule-ramadhan',
         component: () => import('@/views/academic/ScheduleList.vue'),
-        meta: { permission: 'jadwal_formal.view', title: 'Jadwal Ramadhan' },
+        meta: { title: 'Jadwal Ramadhan' },
       },
       {
         path: 'absensi/statistik',
@@ -187,7 +187,7 @@ const routes = [
         path: 'jadwal-diniyyah',
         name: 'schedule-diniyyah',
         component: () => import('@/views/academic/ScheduleList.vue'),
-        meta: { permission: 'jadwal_diniyyah.view', title: 'Jadwal Diniyyah' },
+        meta: { title: 'Jadwal Diniyyah' },
       },
       {
         path: 'absensi-diniyyah/statistik',
