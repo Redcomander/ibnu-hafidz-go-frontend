@@ -206,7 +206,7 @@ const routes = [
         path: 'halaqoh-assignments',
         name: 'halaqoh-assignments',
         component: () => import('@/views/halaqoh/HalaqohList.vue'),
-        meta: { permission: 'halaqoh.view', title: 'Halaqoh' },
+        meta: { title: 'Halaqoh' },
       },
       {
         path: 'halaqoh/statistik/santri',

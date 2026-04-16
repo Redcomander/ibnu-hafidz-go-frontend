@@ -475,7 +475,7 @@ const navItems = [
     to: "/dashboard/halaqoh-assignments",
     icon: "halaqoh",
     label: "Halaqoh",
-    permission: "halaqoh.create",
+    permission: null,
     menuKey: 'halaqoh',
   },
   {

@@ -212,7 +212,7 @@
               Absen Santri
             </button>
             <button
-              v-if="getAccessInfo(group.teacher_id)?.can_manage"
+              v-if="canOpenTeacherAttendance(group)"
               @click="openTeacherAttendance(group)"
               class="flex-1 min-w-[100px] text-xs bg-white/15 hover:bg-white/25 text-white px-2.5 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1"
             >
@@ -549,6 +549,11 @@ function getAccessInfo(teacherId) {
 function getHelperName(group) {
   const first = group.assignments?.[0]
   return first?.helper_teacher?.name || null
+}
+
+function canOpenTeacherAttendance(group) {
+  const access = getAccessInfo(group.teacher_id)
+  return !!(access.can_manage || access.is_substitute || store.currentUserId === group.teacher_id)
 }
 
 // ── Actions ──
