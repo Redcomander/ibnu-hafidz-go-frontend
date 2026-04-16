@@ -192,10 +192,11 @@
                 <th class="px-4 py-3 text-left">Guru Asli</th>
                 <th class="px-4 py-3 text-center">Status</th>
                 <th class="px-4 py-3 text-left">Pengganti</th>
+                <th v-if="isSuperAdmin" class="px-4 py-3 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
-              <tr v-for="s in filteredSubstituteHistory" :key="s.date + s.lesson" class="hover:bg-gray-50/50 transition-colors">
+              <tr v-for="s in filteredSubstituteHistory" :key="s.id || (s.date + s.lesson + s.substitute_teacher)" class="hover:bg-gray-50/50 transition-colors">
                 <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{{ formatDate(s.date) }}</td>
                 <td class="px-4 py-3 font-medium">{{ s.lesson }}</td>
                 <td class="px-4 py-3 text-gray-500">{{ s.kelas }}</td>
@@ -206,9 +207,19 @@
                   </span>
                 </td>
                 <td class="px-4 py-3 font-semibold text-primary">{{ s.substitute_teacher }}</td>
+                <td v-if="isSuperAdmin" class="px-4 py-3 text-center">
+                  <button
+                    @click="deleteSubstituteHistory(s)"
+                    :disabled="deletingHistoryId === s.id"
+                    class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <SvgIcon name="trash" :size="13" />
+                    Hapus
+                  </button>
+                </td>
               </tr>
               <tr v-if="!filteredSubstituteHistory.length">
-                <td colspan="6" class="px-4 py-12 text-center text-gray-400">Tidak ada riwayat penggantian</td>
+                <td :colspan="isSuperAdmin ? 7 : 6" class="px-4 py-12 text-center text-gray-400">Tidak ada riwayat penggantian</td>
               </tr>
             </tbody>
           </table>
@@ -223,10 +234,16 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/api'
 import SvgIcon from '@/components/ui/SvgIcon.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useToastStore } from '@/stores/toast'
 import { format } from 'date-fns'
 import { id } from 'date-fns/locale'
 
 const route = useRoute()
+const authStore = useAuthStore()
+const toast = useToastStore()
+const isSuperAdmin = computed(() => authStore.userRoles?.some((role) => role.name === 'super_admin'))
+const deletingHistoryId = ref(null)
 const isDiniyyah = computed(() => route.name === 'attendance-guru-diniyyah')
 const isRamadhan = computed(() => route.name === 'attendance-guru-ramadhan')
 const attendanceType = computed(() => isDiniyyah.value ? 'diniyyah' : isRamadhan.value ? 'ramadhan' : 'formal')
@@ -364,6 +381,25 @@ function resetFilters() {
     teacher_id: '',
   }
   fetchStats()
+}
+
+async function deleteSubstituteHistory(item) {
+  if (!isSuperAdmin.value || !item?.id) return
+  const ok = window.confirm('Hapus riwayat guru pengganti ini?')
+  if (!ok) return
+
+  deletingHistoryId.value = item.id
+  try {
+    await api.delete(`/attendance/substitute/${item.id}`, {
+      params: { type: attendanceType.value },
+    })
+    toast.success('Riwayat guru pengganti berhasil dihapus')
+    await fetchStats()
+  } catch (err) {
+    toast.error(err.response?.data?.error || 'Gagal menghapus riwayat guru pengganti')
+  } finally {
+    deletingHistoryId.value = null
+  }
 }
 
 async function exportFile(format) {

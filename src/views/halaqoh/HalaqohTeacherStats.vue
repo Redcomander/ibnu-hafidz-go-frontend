@@ -219,6 +219,7 @@
                 <th class="px-4 py-4 font-bold">Guru Asli</th>
                 <th class="px-4 py-4 font-bold">Status</th>
                 <th class="px-4 py-4 font-bold">Pengganti</th>
+                <th v-if="isSuperAdmin" class="px-4 py-4 font-bold text-center">Aksi</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -232,9 +233,19 @@
                 <td class="px-4 py-3 font-medium" :class="h.pengganti !== '-' ? 'text-emerald-600' : 'text-gray-500'">
                   {{ h.pengganti }}
                 </td>
+                <td v-if="isSuperAdmin" class="px-4 py-3 text-center">
+                  <button
+                    @click="deleteHistoryItem(h)"
+                    :disabled="deletingHistoryId === h.id"
+                    class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <SvgIcon name="trash" :size="13" />
+                    Hapus
+                  </button>
+                </td>
               </tr>
               <tr v-if="filteredHistory.length === 0">
-                <td colspan="5" class="px-4 py-8 text-center text-gray-500">Tidak ada riwayat ditemukan</td>
+                <td :colspan="isSuperAdmin ? 6 : 5" class="px-4 py-8 text-center text-gray-500">Tidak ada riwayat ditemukan</td>
               </tr>
             </tbody>
           </table>
@@ -249,8 +260,15 @@
 import { ref, onMounted, computed } from 'vue'
 import api from '@/api'
 import SvgIcon from '@/components/ui/SvgIcon.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useToastStore } from '@/stores/toast'
 
 
+
+const authStore = useAuthStore()
+const toast = useToastStore()
+const isSuperAdmin = computed(() => authStore.userRoles?.some((role) => role.name === 'super_admin'))
+const deletingHistoryId = ref(null)
 
 // Filters
 const filters = ref({
@@ -316,6 +334,23 @@ const statusBadge = (status) => {
   if (s === 'dinas luar') return 'px-2 py-1 text-xs font-semibold rounded bg-pink-100 text-pink-700 uppercase'
   if (s === 'cuti') return 'px-2 py-1 text-xs font-semibold rounded bg-purple-100 text-purple-700 uppercase'
   return 'px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-600 uppercase'
+}
+
+const deleteHistoryItem = async (item) => {
+  if (!isSuperAdmin.value || !item?.id) return
+  const ok = window.confirm('Hapus riwayat guru pengganti halaqoh ini?')
+  if (!ok) return
+
+  deletingHistoryId.value = item.id
+  try {
+    await api.delete(`/halaqoh/substitute-history/${item.id}`)
+    toast.success('Riwayat guru pengganti halaqoh berhasil dihapus')
+    await fetchStats()
+  } catch (err) {
+    toast.error(err.response?.data?.error || 'Gagal menghapus riwayat guru pengganti halaqoh')
+  } finally {
+    deletingHistoryId.value = null
+  }
 }
 
 onMounted(async () => {
