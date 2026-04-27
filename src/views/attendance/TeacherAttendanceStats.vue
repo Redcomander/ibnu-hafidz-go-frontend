@@ -162,6 +162,60 @@
         </div>
       </div>
 
+      <!-- Absence History Table (Izin/Sakit/Alpha) -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-4 border-b border-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-2">
+            <div class="w-1.5 h-6 bg-rose-500 rounded-full"></div>
+            <h3 class="font-bold text-gray-800">Riwayat Ketidakhadiran Guru (Izin / Sakit / Alpha)</h3>
+          </div>
+          <div class="relative w-full sm:w-64">
+            <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><SvgIcon name="search" :size="14" /></div>
+            <input v-model="absenceSearch" type="text" placeholder="Cari guru/pelajaran..." class="w-full h-9 pl-9 pr-3 text-sm rounded-lg border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-rose-400 focus:ring-1 focus:ring-rose-400 outline-none transition-all" />
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50/50 text-gray-500 font-medium border-b border-gray-100">
+              <tr>
+                <th class="px-4 py-3 text-left">Tanggal</th>
+                <th class="px-4 py-3 text-left">Guru</th>
+                <th class="px-4 py-3 text-left">Pelajaran</th>
+                <th class="px-4 py-3 text-left">Kelas</th>
+                <th class="px-4 py-3 text-center">Status</th>
+                <th class="px-4 py-3 text-left">Catatan</th>
+                <th v-if="isSuperAdmin" class="px-4 py-3 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+              <tr v-for="a in filteredAbsenceHistory" :key="a.id" class="hover:bg-gray-50/50 transition-colors">
+                <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{{ formatDate(a.date) }}</td>
+                <td class="px-4 py-3 font-medium">{{ a.teacher }}</td>
+                <td class="px-4 py-3 text-gray-600">{{ a.lesson }}</td>
+                <td class="px-4 py-3 text-gray-500">{{ a.kelas }}</td>
+                <td class="px-4 py-3 text-center">
+                  <span :class="[getStatusBadge(a.status), 'px-2 py-0.5 rounded text-[10px] font-bold uppercase']">{{ a.status }}</span>
+                </td>
+                <td class="px-4 py-3 text-gray-500 text-xs">{{ a.notes || '-' }}</td>
+                <td v-if="isSuperAdmin" class="px-4 py-3 text-center">
+                  <div class="flex items-center justify-center gap-1">
+                    <button @click="openEditAbsence(a)" class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50">
+                      <SvgIcon name="pencil" :size="13" /> Edit
+                    </button>
+                    <button @click="deleteAbsenceRecord(a)" :disabled="deletingAbsenceId === a.id" class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50">
+                      <SvgIcon name="trash" :size="13" /> Hapus
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="!filteredAbsenceHistory.length">
+                <td :colspan="isSuperAdmin ? 7 : 6" class="px-4 py-12 text-center text-gray-400">Tidak ada riwayat ketidakhadiran</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Substitute History Table -->
       <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="p-4 border-b border-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -226,6 +280,38 @@
         </div>
       </div>
     </template>
+
+    <!-- Edit Absence Modal -->
+    <Teleport to="body">
+      <div v-if="editingAbsence" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="editingAbsence = null">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+          <h3 class="text-base font-bold text-gray-800 mb-4">Edit Absensi Guru</h3>
+          <div class="text-sm text-gray-600 mb-4">
+            <p class="font-semibold">{{ editingAbsence.teacher }}</p>
+            <p class="text-xs text-gray-400">{{ editingAbsence.lesson }} — {{ editingAbsence.kelas }} — {{ formatDate(editingAbsence.date) }}</p>
+          </div>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
+              <select v-model="editAbsenceForm.status" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                <option value="Hadir">Hadir</option>
+                <option value="Izin">Izin</option>
+                <option value="Sakit">Sakit</option>
+                <option value="Alpha">Alpha</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Catatan</label>
+              <textarea v-model="editAbsenceForm.notes" rows="3" class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none" placeholder="Catatan opsional..."></textarea>
+            </div>
+          </div>
+          <div class="flex gap-2 mt-5">
+            <button @click="editingAbsence = null" class="flex-1 h-9 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
+            <button @click="saveAbsenceEdit" :disabled="savingAbsence" class="flex-1 h-9 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50">{{ savingAbsence ? 'Menyimpan...' : 'Simpan' }}</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -273,11 +359,19 @@ const data = ref({
   teacher_counts: { Hadir: 0, Izin: 0, Sakit: 0, Alpha: 0, Substitute: 0 },
   teacher_summary: [],
   substitute_history: [],
+  absence_history: [],
 })
 
 // Search refs
 const teacherTabSearch = ref('')
 const substituteSearch = ref('')
+const absenceSearch = ref('')
+
+// Absence edit state
+const editingAbsence = ref(null)
+const editAbsenceForm = ref({ status: '', notes: '' })
+const savingAbsence = ref(false)
+const deletingAbsenceId = ref(null)
 
 const teacherCards = computed(() => [
   { label: 'Hadir', count: data.value.teacher_counts.Hadir || 0,  icon: 'check-circle', bg: 'bg-gradient-to-br from-green-500 to-emerald-600' },
@@ -297,6 +391,18 @@ const filteredTeacherSummary = computed(() => {
   if (!teacherTabSearch.value) return list
   const s = teacherTabSearch.value.toLowerCase().trim()
   return list.filter(t => (t.name || '').toLowerCase().includes(s))
+})
+
+const filteredAbsenceHistory = computed(() => {
+  const list = data.value.absence_history || []
+  if (!absenceSearch.value) return list
+  const s = absenceSearch.value.toLowerCase().trim()
+  return list.filter(item =>
+    (item.teacher || '').toLowerCase().includes(s) ||
+    (item.lesson || '').toLowerCase().includes(s) ||
+    (item.kelas || '').toLowerCase().includes(s) ||
+    (item.status || '').toLowerCase().includes(s)
+  )
 })
 
 const filteredSubstituteHistory = computed(() => {
@@ -381,6 +487,42 @@ function resetFilters() {
     teacher_id: '',
   }
   fetchStats()
+}
+
+function openEditAbsence(item) {
+  editingAbsence.value = item
+  editAbsenceForm.value = { status: item.status, notes: item.notes || '' }
+}
+
+async function saveAbsenceEdit() {
+  if (!editingAbsence.value) return
+  savingAbsence.value = true
+  try {
+    await api.put(`/attendance/teacher-record/${editingAbsence.value.id}`, editAbsenceForm.value)
+    toast.success('Data absensi berhasil diperbarui')
+    editingAbsence.value = null
+    await fetchStats()
+  } catch (err) {
+    toast.error(err.response?.data?.error || 'Gagal memperbarui data absensi')
+  } finally {
+    savingAbsence.value = false
+  }
+}
+
+async function deleteAbsenceRecord(item) {
+  if (!isSuperAdmin.value || !item?.id) return
+  const ok = window.confirm(`Hapus data absensi ${item.teacher} (${item.status}) pada ${formatDate(item.date)}?`)
+  if (!ok) return
+  deletingAbsenceId.value = item.id
+  try {
+    await api.delete(`/attendance/teacher-record/${item.id}`)
+    toast.success('Data absensi berhasil dihapus')
+    await fetchStats()
+  } catch (err) {
+    toast.error(err.response?.data?.error || 'Gagal menghapus data absensi')
+  } finally {
+    deletingAbsenceId.value = null
+  }
 }
 
 async function deleteSubstituteHistory(item) {
