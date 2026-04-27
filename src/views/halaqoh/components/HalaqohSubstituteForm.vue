@@ -134,10 +134,24 @@ const form = ref({
 
 onMounted(async () => {
   try {
-    const { data } = await api.get('/users', { params: { per_page: 999 } })
-    teachers.value = (data.data || data || []).filter(
-      (t) => t.id !== props.group.teacher_id
-    )
+    const collected = []
+    let page = 1
+    const perPage = 100
+
+    // Reuse the same endpoint used by formal/diniyyah substitute picker.
+    while (true) {
+      const { data } = await api.get('/attendance/assignable-teachers', {
+        params: { page, per_page: perPage },
+      })
+
+      const rows = data?.data || []
+      collected.push(...rows)
+
+      if (rows.length < perPage) break
+      page += 1
+    }
+
+    teachers.value = collected.filter((t) => t.id !== props.group.teacher_id)
   } catch {
     toast.error('Gagal memuat daftar guru')
   }
