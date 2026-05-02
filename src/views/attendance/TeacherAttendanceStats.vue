@@ -198,7 +198,7 @@
                 </td>
                 <td class="px-4 py-3 text-gray-500 text-xs">{{ a.notes || '-' }}</td>
                 <td v-if="isSuperAdmin" class="px-4 py-3 text-center">
-                  <div class="flex items-center justify-center gap-1">
+                  <div v-if="canModifyAbsenceEntry(a)" class="flex items-center justify-center gap-1">
                     <button @click="openEditAbsence(a)" class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50">
                       <SvgIcon name="pencil" :size="13" /> Edit
                     </button>
@@ -206,6 +206,7 @@
                       <SvgIcon name="trash" :size="13" /> Hapus
                     </button>
                   </div>
+                  <span v-else class="text-xs text-gray-400">-</span>
                 </td>
               </tr>
               <tr v-if="!filteredAbsenceHistory.length">
@@ -432,6 +433,10 @@ function formatDate(dateStr) {
   } catch {
     return dateStr
   }
+}
+
+function canModifyAbsenceEntry(item) {
+  return item?.source !== 'substitute_log'
 }
 
 onMounted(async () => {

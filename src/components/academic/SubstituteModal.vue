@@ -33,6 +33,7 @@
                 <select v-model="form.status" class="input-field w-full" required>
                     <option value="Sakit">Sakit</option>
                     <option value="Izin">Izin</option>
+                    <option value="Alpha">Alpha</option>
                     <option value="Dinas Luar">Dinas Luar</option>
                     <option value="Lainnya">Lainnya</option>
                 </select>
