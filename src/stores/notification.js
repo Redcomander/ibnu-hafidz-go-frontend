@@ -29,17 +29,24 @@ export const useNotificationStore = defineStore('notification', () => {
         }, delay);
     };
 
-    const buildSSEURL = () => {
-        const token = authStore.accessToken;
-        if (!token) return null;
+    const buildSSEURL = async () => {
+        if (!authStore.accessToken) return null;
 
-        const apiBase = import.meta.env.VITE_API_URL;
-        if (apiBase) {
-            const base = apiBase.replace(/\/$/, '');
-            return `${base}/notifications/stream?token=${encodeURIComponent(token)}`;
+        try {
+            const { data } = await api.post('/notifications/stream/ticket');
+            const ticket = data.ticket;
+            if (!ticket) return null;
+
+            const apiBase = import.meta.env.VITE_API_URL;
+            if (apiBase) {
+                const base = apiBase.replace(/\/$/, '');
+                return `${base}/notifications/stream?ticket=${encodeURIComponent(ticket)}`;
+            }
+            return `/api/notifications/stream?ticket=${encodeURIComponent(ticket)}`;
+        } catch (e) {
+            console.error('Failed to get SSE ticket', e);
+            return null;
         }
-
-        return `/api/notifications/stream?token=${encodeURIComponent(token)}`;
     };
 
     const fetchRecent = async () => {
@@ -65,10 +72,10 @@ export const useNotificationStore = defineStore('notification', () => {
         }
     };
 
-    const connectSSE = () => {
+    const connectSSE = async () => {
         if (eventSource.value || isConnected.value) return;
 
-        const url = buildSSEURL();
+        const url = await buildSSEURL();
         if (!url) return;
 
         if (reconnectTimer) {
