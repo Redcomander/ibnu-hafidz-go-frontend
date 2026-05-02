@@ -15,6 +15,10 @@
           <SvgIcon name="folder" :size="14" />
           <span class="hidden sm:inline">Kategori</span>
         </button>
+        <router-link :to="{ name: 'article-comments-moderation' }" class="btn-secondary flex items-center gap-2 !rounded-xl !py-2 !px-3 text-sm">
+          <SvgIcon name="chat" :size="14" />
+          <span class="hidden sm:inline">Moderasi Komentar</span>
+        </router-link>
         <router-link :to="{ name: 'article-create' }" class="btn-primary flex items-center gap-2 !rounded-xl !py-2 !px-3 text-sm shadow-lg shadow-green-200/50">
           <SvgIcon name="plus" :size="14" />
           <span>Tulis Artikel</span>

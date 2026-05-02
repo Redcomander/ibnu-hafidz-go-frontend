@@ -303,6 +303,12 @@ const routes = [
         meta: { permission: 'content.view', title: 'Edit Artikel' },
       },
       {
+        path: 'articles/comments/moderation',
+        name: 'article-comments-moderation',
+        component: () => import('@/views/articles/CommentModeration.vue'),
+        meta: { permission: 'article.edit', title: 'Moderasi Komentar' },
+      },
+      {
         path: 'galeri',
         name: 'gallery',
         component: () => import('@/views/gallery/GalleryList.vue'),
