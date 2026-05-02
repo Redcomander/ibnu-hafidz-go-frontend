@@ -320,12 +320,6 @@ const routes = [
         component: () => import('@/views/settings/SettingsView.vue'),
         meta: { title: 'Pengaturan Sidebar', roles: ['super_admin'] },
       },
-      {
-        path: 'kelas/:id',
-        name: 'kelas-detail',
-        component: () => import('@/views/kelas/KelasDetail.vue'),
-        meta: { permission: 'kelas.view', title: 'Detail Kelas' },
-      },
     ],
   },
 
