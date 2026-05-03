@@ -857,6 +857,10 @@ async function saveSubstituteHistory() {
     closeSubstituteModal()
     await fetchStats()
   } catch (err) {
+    if (err?.response?.status === 401) {
+      toast.error('Sesi login sudah habis. Silakan login ulang lalu coba simpan lagi.')
+      return
+    }
     toast.error(err.response?.data?.error || 'Gagal menyimpan riwayat guru pengganti')
   } finally {
     savingSubstitute.value = false
