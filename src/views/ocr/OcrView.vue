@@ -46,6 +46,62 @@
       </div>
     </div>
 
+    <!-- Academic Integration -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 space-y-3">
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-sm font-semibold text-gray-700">Integrasi Akademik</span>
+        <button @click="loadAcademicData" class="text-xs text-primary hover:underline">Refresh</button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs font-medium text-gray-500">Tipe Pelajaran</label>
+          <select v-model="lessonType" @change="handleLessonTypeChange"
+            class="mt-1 w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+            <option value="formal">Formal</option>
+            <option value="diniyyah">Diniyyah</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-xs font-medium text-gray-500">Pelajaran</label>
+          <select v-model="selectedLessonId" @change="handleLessonOrClassChange"
+            class="mt-1 w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+            <option :value="null">Pilih pelajaran</option>
+            <option v-for="lesson in lessons" :key="lesson.id" :value="lesson.id">{{ lesson.name || `Pelajaran #${lesson.id}` }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-xs font-medium text-gray-500">Kelas</label>
+          <select v-model="selectedClassId" @change="handleLessonOrClassChange"
+            class="mt-1 w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+            <option :value="null">Pilih kelas</option>
+            <option v-for="k in classes" :key="k.id" :value="k.id">{{ classLabel(k) }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-xs font-medium text-gray-500">Guru</label>
+          <select v-model="selectedTeacherId"
+            class="mt-1 w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+            <option :value="null">Pilih guru</option>
+            <option v-for="t in teachers" :key="t.id" :value="t.id">{{ t.name || `Guru #${t.id}` }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-gray-100 bg-gray-50 p-3">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ringkasan Integrasi</p>
+        <div class="mt-2 text-sm text-gray-700 space-y-1">
+          <p><span class="text-gray-400">Pelajaran:</span> {{ selectedLessonObj?.name || 'Belum dipilih' }}</p>
+          <p><span class="text-gray-400">Kelas:</span> {{ selectedClassObj ? classLabel(selectedClassObj) : 'Belum dipilih' }}</p>
+          <p><span class="text-gray-400">Guru:</span> {{ selectedTeacherObj?.name || 'Belum dipilih' }}</p>
+          <p><span class="text-gray-400">Santri Kelas:</span> {{ selectedClassStudents.length }}</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Scan Mode Tabs -->
     <div class="flex gap-2 bg-gray-100 rounded-xl p-1">
       <button v-for="mode in scanModes" :key="mode.key"
@@ -240,6 +296,36 @@
             </div>
           </div>
 
+          <div class="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-3">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Integrasi Data</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+              <div class="rounded-lg bg-white border border-gray-100 px-3 py-2">
+                <p class="text-[11px] uppercase tracking-wide text-gray-400">Pelajaran</p>
+                <p class="font-semibold text-gray-800 mt-0.5">{{ getResultContext(lastResult).lessonName || 'Belum dipilih' }}</p>
+              </div>
+              <div class="rounded-lg bg-white border border-gray-100 px-3 py-2">
+                <p class="text-[11px] uppercase tracking-wide text-gray-400">Kelas</p>
+                <p class="font-semibold text-gray-800 mt-0.5">{{ getResultContext(lastResult).className || 'Belum dipilih' }}</p>
+              </div>
+              <div class="rounded-lg bg-white border border-gray-100 px-3 py-2">
+                <p class="text-[11px] uppercase tracking-wide text-gray-400">Guru</p>
+                <p class="font-semibold text-gray-800 mt-0.5">{{ getResultContext(lastResult).teacherName || 'Belum dipilih' }}</p>
+              </div>
+            </div>
+
+            <div class="mt-3 rounded-lg bg-white border border-gray-100 p-3">
+              <p class="text-[11px] uppercase tracking-wide text-gray-400 mb-2">Daftar Santri Kelas ({{ getResultContext(lastResult).students.length }})</p>
+              <div v-if="getResultContext(lastResult).students.length" class="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                <div v-for="(s, idx) in getResultContext(lastResult).students" :key="s.id || idx"
+                  class="flex items-center justify-between gap-2 text-sm rounded-md border border-gray-100 bg-gray-50 px-2.5 py-1.5">
+                  <span class="font-medium text-gray-700 truncate">{{ studentLabel(s) }}</span>
+                  <span class="text-[11px] text-gray-400">#{{ idx + 1 }}</span>
+                </div>
+              </div>
+              <p v-else class="text-xs text-gray-400 italic">Belum ada data santri untuk kelas ini.</p>
+            </div>
+          </div>
+
           <!-- Answers Grid -->
           <div v-if="lastResult.answers" class="mt-3">
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Jawaban</p>
@@ -277,7 +363,8 @@
         
         <div class="space-y-3">
           <div v-for="(res, i) in bulkResults" :key="i"
-            class="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 flex items-center gap-4">
+            class="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 space-y-3">
+            <div class="flex items-center gap-4">
             <div :class="[
               'w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold shrink-0',
               res.error ? 'bg-red-100 text-red-600' :
@@ -301,6 +388,36 @@
               scoreGrade(res.score) === 'C' ? 'text-yellow-600' :
               'text-red-600'
             ]">{{ res.score ?? '–' }}</div>
+            </div>
+
+            <div class="rounded-xl border border-gray-100 bg-gray-50 p-3">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                <div class="rounded-lg bg-white border border-gray-100 px-3 py-2">
+                  <p class="text-[11px] uppercase tracking-wide text-gray-400">Pelajaran</p>
+                  <p class="font-semibold text-gray-800 mt-0.5">{{ getResultContext(res).lessonName || 'Belum dipilih' }}</p>
+                </div>
+                <div class="rounded-lg bg-white border border-gray-100 px-3 py-2">
+                  <p class="text-[11px] uppercase tracking-wide text-gray-400">Kelas</p>
+                  <p class="font-semibold text-gray-800 mt-0.5">{{ getResultContext(res).className || 'Belum dipilih' }}</p>
+                </div>
+                <div class="rounded-lg bg-white border border-gray-100 px-3 py-2">
+                  <p class="text-[11px] uppercase tracking-wide text-gray-400">Guru</p>
+                  <p class="font-semibold text-gray-800 mt-0.5">{{ getResultContext(res).teacherName || 'Belum dipilih' }}</p>
+                </div>
+              </div>
+
+              <details class="mt-3 rounded-lg bg-white border border-gray-100 p-2.5">
+                <summary class="text-xs font-semibold text-gray-600 cursor-pointer">Daftar Santri Kelas ({{ getResultContext(res).students.length }})</summary>
+                <div v-if="getResultContext(res).students.length" class="max-h-36 overflow-y-auto space-y-1.5 pr-1 mt-2">
+                  <div v-for="(s, idx) in getResultContext(res).students" :key="s.id || idx"
+                    class="flex items-center justify-between gap-2 text-sm rounded-md border border-gray-100 bg-gray-50 px-2.5 py-1.5">
+                    <span class="font-medium text-gray-700 truncate">{{ studentLabel(s) }}</span>
+                    <span class="text-[11px] text-gray-400">#{{ idx + 1 }}</span>
+                  </div>
+                </div>
+                <p v-else class="text-xs text-gray-400 italic mt-2">Belum ada data santri untuk kelas ini.</p>
+              </details>
+            </div>
           </div>
         </div>
       </div>
@@ -373,8 +490,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, computed } from 'vue'
 import SvgIcon from '@/components/ui/SvgIcon.vue'
+import api from '@/api'
 import {
   ocrHealth, ocrScan, ocrScanBulk, ocrScanHardware,
   ocrScannerDevices, ocrGetAnswerKeys, ocrSaveAnswerKey, ocrDeleteAnswerKey,
@@ -422,6 +540,20 @@ const newKey = reactive({
 })
 const answerInputRefs = ref([])
 
+// Academic integration
+const lessonType = ref('formal')
+const lessons = ref([])
+const classes = ref([])
+const teachers = ref([])
+const selectedLessonId = ref(null)
+const selectedClassId = ref(null)
+const selectedTeacherId = ref(null)
+const selectedClassStudents = ref([])
+
+const selectedLessonObj = computed(() => lessons.value.find(l => Number(l.id) === Number(selectedLessonId.value)) || null)
+const selectedClassObj = computed(() => classes.value.find(k => Number(k.id) === Number(selectedClassId.value)) || null)
+const selectedTeacherObj = computed(() => teachers.value.find(t => Number(t.id) === Number(selectedTeacherId.value)) || null)
+
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
@@ -432,6 +564,7 @@ onMounted(async () => {
     serviceOffline.value = true
   }
   await loadAnswerKeys()
+  await loadAcademicData()
 })
 
 // ─── File Handling ────────────────────────────────────────────────────────────
@@ -500,9 +633,12 @@ async function doScan() {
     const fd = new FormData()
     fd.append('image', previewFile.value)
     if (selectedAnswerKeyId.value) fd.append('answerKeyId', selectedAnswerKeyId.value)
+    if (selectedLessonId.value) fd.append('lessonId', selectedLessonId.value)
+    if (selectedClassId.value) fd.append('kelasId', selectedClassId.value)
+    if (selectedTeacherId.value) fd.append('teacherId', selectedTeacherId.value)
 
     const res = await ocrScan(fd)
-    lastResult.value = res.data
+    lastResult.value = addResultContext(res.data)
   } catch (err) {
     scanError.value = err.response?.data?.message || err.response?.data?.error || err.message || 'Gagal memproses gambar'
   } finally {
@@ -521,9 +657,13 @@ async function doScanBulk() {
     const fd = new FormData()
     uploadFiles.value.forEach(f => fd.append('images', f))
     if (selectedAnswerKeyId.value) fd.append('answerKeyId', selectedAnswerKeyId.value)
+    if (selectedLessonId.value) fd.append('lessonId', selectedLessonId.value)
+    if (selectedClassId.value) fd.append('kelasId', selectedClassId.value)
+    if (selectedTeacherId.value) fd.append('teacherId', selectedTeacherId.value)
 
     const res = await ocrScanBulk(fd)
-    bulkResults.value = res.data?.results || []
+    const raw = res.data?.results || []
+    bulkResults.value = raw.map(item => addResultContext(item))
   } catch (err) {
     scanError.value = err.response?.data?.message || err.message || 'Gagal memproses gambar'
   } finally {
@@ -542,9 +682,12 @@ async function doHardwareScan() {
     const fd = new FormData()
     fd.append('deviceId', selectedScannerId.value)
     if (selectedAnswerKeyId.value) fd.append('answerKeyId', selectedAnswerKeyId.value)
+    if (selectedLessonId.value) fd.append('lessonId', selectedLessonId.value)
+    if (selectedClassId.value) fd.append('kelasId', selectedClassId.value)
+    if (selectedTeacherId.value) fd.append('teacherId', selectedTeacherId.value)
 
     const res = await ocrScanHardware(fd)
-    lastResult.value = res.data
+    lastResult.value = addResultContext(res.data)
   } catch (err) {
     scanError.value = err.response?.data?.message || err.message || 'Gagal scan dengan scanner'
   } finally {
@@ -577,6 +720,92 @@ async function loadAnswerKeys() {
     }
   } catch {
     answerKeys.value = []
+  }
+}
+
+async function loadAcademicData() {
+  await Promise.all([
+    loadLessons(),
+    loadClasses(),
+    loadTeachers(),
+  ])
+  await handleLessonOrClassChange()
+}
+
+async function loadLessons() {
+  try {
+    const res = await api.get('/lessons', { params: { type: lessonType.value } })
+    lessons.value = Array.isArray(res.data)
+      ? res.data
+      : Array.isArray(res.data?.data)
+        ? res.data.data
+        : []
+  } catch {
+    lessons.value = []
+  }
+}
+
+async function loadClasses() {
+  try {
+    const res = await api.get('/kelas', { params: { per_page: 1000 } })
+    classes.value = Array.isArray(res.data)
+      ? res.data
+      : Array.isArray(res.data?.data)
+        ? res.data.data
+        : []
+  } catch {
+    classes.value = []
+  }
+}
+
+async function loadTeachers() {
+  try {
+    const res = await api.get('/users', { params: { role: 'guru', per_page: 1000 } })
+    teachers.value = Array.isArray(res.data)
+      ? res.data
+      : Array.isArray(res.data?.data)
+        ? res.data.data
+        : []
+  } catch {
+    teachers.value = []
+  }
+}
+
+async function handleLessonTypeChange() {
+  selectedLessonId.value = null
+  await loadLessons()
+  await handleLessonOrClassChange()
+}
+
+async function handleLessonOrClassChange() {
+  // Auto-pick teacher from lesson assignment when lesson and class are selected.
+  const lesson = selectedLessonObj.value
+  const classId = Number(selectedClassId.value)
+  if (lesson && classId) {
+    const assignment = (lesson.assignments || []).find(a => Number(a.kelas?.id) === classId)
+    if (assignment?.teacher?.id) {
+      selectedTeacherId.value = assignment.teacher.id
+    }
+  }
+  await ensureSelectedClassStudents()
+}
+
+async function ensureSelectedClassStudents() {
+  selectedClassStudents.value = []
+  const cls = selectedClassObj.value
+  if (!cls) return
+
+  if (Array.isArray(cls.students) && cls.students.length) {
+    selectedClassStudents.value = cls.students
+    return
+  }
+
+  try {
+    const res = await api.get(`/kelas/${cls.id}`)
+    const detail = res.data?.data || res.data
+    selectedClassStudents.value = Array.isArray(detail?.students) ? detail.students : []
+  } catch {
+    selectedClassStudents.value = []
   }
 }
 
@@ -634,6 +863,38 @@ function formatAnswerPreview(answers) {
   if (!answers || !answers.length) return 'Tidak ada jawaban'
   const arr = Array.isArray(answers) ? answers : Object.values(answers)
   return arr.slice(0, 10).join(' ') + (arr.length > 10 ? ' ...' : '')
+}
+
+function classLabel(k) {
+  if (!k) return '-'
+  return `${k.nama || '-'} ${k.tingkat || ''}`.trim()
+}
+
+function studentLabel(student) {
+  return student?.nama_lengkap || student?.nama || student?.name || `Santri #${student?.id || '?'}`
+}
+
+function buildResultContext() {
+  return {
+    lessonId: selectedLessonId.value,
+    lessonName: selectedLessonObj.value?.name || null,
+    classId: selectedClassId.value,
+    className: selectedClassObj.value ? classLabel(selectedClassObj.value) : null,
+    teacherId: selectedTeacherId.value,
+    teacherName: selectedTeacherObj.value?.name || null,
+    students: [...selectedClassStudents.value],
+  }
+}
+
+function addResultContext(result) {
+  return {
+    ...(result || {}),
+    metaContext: buildResultContext(),
+  }
+}
+
+function getResultContext(result) {
+  return result?.metaContext || buildResultContext()
 }
 </script>
 
