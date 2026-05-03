@@ -224,16 +224,26 @@
             <div class="w-1.5 h-6 bg-amber-500 rounded-full"></div>
             <h3 class="font-bold text-gray-800">Riwayat Guru Pengganti</h3>
           </div>
-          <div class="relative w-full sm:w-64">
-            <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-              <SvgIcon name="search" :size="14" />
+          <div class="flex w-full sm:w-auto items-center gap-2">
+            <button
+              v-if="canManageSubstitute"
+              @click="openSubstituteModal()"
+              class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:opacity-90"
+            >
+              <SvgIcon name="plus" :size="14" />
+              Tambah Riwayat
+            </button>
+            <div class="relative w-full sm:w-64">
+              <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <SvgIcon name="search" :size="14" />
+              </div>
+              <input
+                v-model="substituteSearch"
+                type="text"
+                placeholder="Cari mapel/guru..."
+                class="w-full h-9 pl-9 pr-3 text-sm rounded-lg border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all"
+              />
             </div>
-            <input
-              v-model="substituteSearch"
-              type="text"
-              placeholder="Cari mapel/guru..."
-              class="w-full h-9 pl-9 pr-3 text-sm rounded-lg border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all"
-            />
           </div>
         </div>
 
@@ -263,14 +273,23 @@
                 </td>
                 <td class="px-4 py-3 font-semibold text-primary">{{ s.substitute_teacher }}</td>
                 <td v-if="isSuperAdmin" class="px-4 py-3 text-center">
-                  <button
-                    @click="deleteSubstituteHistory(s)"
-                    :disabled="deletingHistoryId === s.id"
-                    class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <SvgIcon name="trash" :size="13" />
-                    Hapus
-                  </button>
+                  <div class="flex items-center justify-center gap-1">
+                    <button
+                      @click="openSubstituteModal(s)"
+                      class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+                    >
+                      <SvgIcon name="pencil" :size="13" />
+                      Edit
+                    </button>
+                    <button
+                      @click="deleteSubstituteHistory(s)"
+                      :disabled="deletingHistoryId === s.id"
+                      class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <SvgIcon name="trash" :size="13" />
+                      Hapus
+                    </button>
+                  </div>
                 </td>
               </tr>
               <tr v-if="!filteredSubstituteHistory.length">
@@ -313,6 +332,68 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Add/Edit Substitute Modal -->
+    <Teleport to="body">
+      <div v-if="substituteModal.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="closeSubstituteModal">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-xl p-6">
+          <h3 class="text-base font-bold text-gray-800 mb-4">{{ substituteModal.editingId ? 'Edit Riwayat Guru Pengganti' : 'Tambah Riwayat Guru Pengganti' }}</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Tanggal</label>
+              <input v-model="substituteForm.date" type="date" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
+              <select v-model="substituteForm.status" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                <option value="Izin">Izin</option>
+                <option value="Sakit">Sakit</option>
+                <option value="Alpha">Alpha</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Jadwal {{ requiresScheduleForSubstitute ? '' : '(opsional)' }}</label>
+              <select v-model="substituteForm.jadwal_id" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                <option value="">{{ requiresScheduleForSubstitute ? 'Pilih jadwal...' : 'Tanpa jadwal (input manual)' }}</option>
+                <option v-for="opt in substituteScheduleOptions" :key="opt.id" :value="opt.id">
+                  {{ opt.lesson }} - {{ opt.kelas }}
+                </option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Pelajaran</label>
+              <input v-model="substituteForm.lesson" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="Contoh: Nahwu" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Kelas</label>
+              <input v-model="substituteForm.kelas" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="Contoh: A 1" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Guru Asli</label>
+              <select v-model="substituteForm.original_teacher_id" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                <option value="">Pilih guru asli...</option>
+                <option v-for="t in teacherList" :key="`orig-${t.id}`" :value="t.id">{{ t.name }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Pengganti</label>
+              <select v-model="substituteForm.substitute_teacher_id" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                <option value="">Pilih guru pengganti...</option>
+                <option v-for="t in teacherList" :key="t.id" :value="t.id">{{ t.name }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="mt-3">
+            <label class="block text-xs font-medium text-gray-600 mb-1">Catatan (opsional)</label>
+            <textarea v-model="substituteForm.reason" rows="2" class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none" placeholder="Catatan alasan pengganti..."></textarea>
+          </div>
+          <div class="flex gap-2 mt-5">
+            <button @click="closeSubstituteModal" class="flex-1 h-9 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
+            <button @click="saveSubstituteHistory" :disabled="savingSubstitute" class="flex-1 h-9 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50">{{ savingSubstitute ? 'Menyimpan...' : 'Simpan' }}</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -330,6 +411,7 @@ const route = useRoute()
 const authStore = useAuthStore()
 const toast = useToastStore()
 const isSuperAdmin = computed(() => authStore.userRoles?.some((role) => role.name === 'super_admin'))
+const canManageSubstitute = computed(() => authStore.userRoles?.some((role) => ['super_admin', 'admin', 'staff', 'tim_presensi'].includes(role.name)))
 const deletingHistoryId = ref(null)
 const isDiniyyah = computed(() => route.name === 'attendance-guru-diniyyah')
 const isRamadhan = computed(() => route.name === 'attendance-guru-ramadhan')
@@ -373,6 +455,25 @@ const editingAbsence = ref(null)
 const editAbsenceForm = ref({ status: '', notes: '' })
 const savingAbsence = ref(false)
 const deletingAbsenceId = ref(null)
+const substituteModal = ref({ open: false, editingId: null })
+const substituteForm = ref({
+  date: today,
+  jadwal_id: '',
+  lesson: '',
+  kelas: '',
+  original_teacher_id: '',
+  status: 'Izin',
+  substitute_teacher_id: '',
+  reason: '',
+})
+const substituteScheduleOptions = ref([])
+const savingSubstitute = ref(false)
+const requiresScheduleForSubstitute = computed(() => false) // schedule is always optional (manual entry supported)
+
+const selectedScheduleMeta = computed(() => {
+  const selectedId = Number(substituteForm.value.jadwal_id)
+  return substituteScheduleOptions.value.find((item) => item.id === selectedId) || null
+})
 
 const teacherCards = computed(() => [
   { label: 'Hadir', count: data.value.teacher_counts.Hadir || 0,  icon: 'check-circle', bg: 'bg-gradient-to-br from-green-500 to-emerald-600' },
@@ -462,6 +563,34 @@ async function fetchStats() {
     console.error('Failed to fetch teacher statistics:', err)
   } finally {
     loading.value = false
+  }
+}
+
+async function loadSubstituteScheduleOptions() {
+  if (!substituteForm.value.date) {
+    substituteScheduleOptions.value = []
+    return
+  }
+  try {
+    const res = await api.get('/schedules', {
+      params: {
+        type: attendanceType.value,
+        date: substituteForm.value.date,
+      },
+    })
+    const rows = Array.isArray(res.data) ? res.data : []
+    substituteScheduleOptions.value = rows
+      .filter((row) => row?.assignment?.teacher?.id)
+      .map((row) => ({
+        id: row.id,
+        lesson: row.assignment?.lesson?.nama || row.assignment?.diniyyah_lesson?.nama || '-',
+        kelas: `${row.assignment?.kelas?.nama || ''} ${row.assignment?.kelas?.tingkat || ''}`.trim(),
+        original_teacher_id: row.assignment?.teacher?.id || null,
+        original_teacher: row.assignment?.teacher?.name || '-',
+      }))
+      .sort((a, b) => a.lesson.localeCompare(b.lesson))
+  } catch {
+    substituteScheduleOptions.value = []
   }
 }
 
@@ -556,6 +685,92 @@ async function deleteSubstituteHistory(item) {
     toast.error(err.response?.data?.error || 'Gagal menghapus riwayat guru pengganti')
   } finally {
     deletingHistoryId.value = null
+  }
+}
+
+async function openSubstituteModal(item = null) {
+  substituteModal.value.open = true
+  substituteModal.value.editingId = item?.id || null
+  substituteForm.value = {
+    date: item?.date ? String(item.date).slice(0, 10) : today,
+    jadwal_id: item?.jadwal_id || '',
+    lesson: item?.lesson || '',
+    kelas: item?.kelas || '',
+    original_teacher_id: item?.original_teacher_id || '',
+    status: item?.original_status || 'Izin',
+    substitute_teacher_id: item?.substitute_teacher_id || '',
+    reason: item?.reason || '',
+  }
+  await loadSubstituteScheduleOptions()
+  if (!item && selectedScheduleMeta.value) {
+    substituteForm.value.lesson = selectedScheduleMeta.value.lesson || ''
+    substituteForm.value.kelas = selectedScheduleMeta.value.kelas || ''
+    substituteForm.value.original_teacher_id = selectedScheduleMeta.value.original_teacher_id || ''
+  }
+}
+
+function closeSubstituteModal() {
+  substituteModal.value = { open: false, editingId: null }
+}
+
+watch(() => substituteForm.value.date, async () => {
+  if (!substituteModal.value.open) return
+  const previousSchedule = substituteForm.value.jadwal_id
+  await loadSubstituteScheduleOptions()
+  if (!substituteScheduleOptions.value.some((opt) => opt.id === Number(previousSchedule))) {
+    substituteForm.value.jadwal_id = ''
+  }
+})
+
+watch(() => substituteForm.value.jadwal_id, (value) => {
+  const selected = substituteScheduleOptions.value.find((opt) => opt.id === Number(value))
+  if (!selected) return
+  substituteForm.value.lesson = selected.lesson || substituteForm.value.lesson
+  substituteForm.value.kelas = selected.kelas || substituteForm.value.kelas
+  substituteForm.value.original_teacher_id = selected.original_teacher_id || substituteForm.value.original_teacher_id
+})
+
+async function saveSubstituteHistory() {
+  const requiresSchedule = requiresScheduleForSubstitute.value
+  if (!substituteForm.value.date || !substituteForm.value.substitute_teacher_id || !substituteForm.value.original_teacher_id || !substituteForm.value.lesson || !substituteForm.value.kelas) {
+    toast.error('Tanggal, pelajaran, kelas, guru asli, dan pengganti wajib diisi')
+    return
+  }
+  if (requiresSchedule && !substituteForm.value.jadwal_id) {
+    toast.error('Jadwal wajib dipilih untuk diniyyah')
+    return
+  }
+
+  savingSubstitute.value = true
+  try {
+    const payload = {
+      type: attendanceType.value,
+      substitute_teacher_id: Number(substituteForm.value.substitute_teacher_id),
+      original_teacher_id: Number(substituteForm.value.original_teacher_id),
+      date: substituteForm.value.date,
+      lesson: substituteForm.value.lesson,
+      kelas: substituteForm.value.kelas,
+      status: substituteForm.value.status,
+      reason: substituteForm.value.reason,
+    }
+    if (substituteForm.value.jadwal_id) {
+      payload.jadwal_id = Number(substituteForm.value.jadwal_id)
+    }
+    if (substituteModal.value.editingId) {
+      await api.put(`/attendance/substitute/${substituteModal.value.editingId}`, payload, {
+        params: { type: attendanceType.value },
+      })
+      toast.success('Riwayat guru pengganti berhasil diperbarui')
+    } else {
+      await api.post('/attendance/substitute', payload)
+      toast.success('Riwayat guru pengganti berhasil ditambahkan')
+    }
+    closeSubstituteModal()
+    await fetchStats()
+  } catch (err) {
+    toast.error(err.response?.data?.error || 'Gagal menyimpan riwayat guru pengganti')
+  } finally {
+    savingSubstitute.value = false
   }
 }
 

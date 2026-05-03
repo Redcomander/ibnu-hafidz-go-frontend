@@ -251,12 +251,17 @@
       </div>
 
       <!-- Riwayat Guru Pengganti Table -->
-      <div v-if="historyList && historyList.length > 0" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h3 class="font-bold text-gray-800 border-l-4 border-amber-500 pl-2">Riwayat Guru Pengganti</h3>
-          <div class="relative max-w-xs w-full">
+          <div class="flex items-center gap-2">
+            <button @click="openSubstituteModal()" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600">
+              <SvgIcon name="plus" :size="13" /> Tambah Riwayat
+            </button>
+          <div class="relative max-w-xs w-full ml-2">
             <SvgIcon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" :size="16" />
             <input v-model="historySearchQuery" type="text" placeholder="Cari sesi/guru..." class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors outline-none" />
+          </div>
           </div>
         </div>
         <div class="overflow-x-auto">
@@ -268,7 +273,7 @@
                 <th class="px-4 py-4 font-bold">Guru Asli</th>
                 <th class="px-4 py-4 font-bold">Status</th>
                 <th class="px-4 py-4 font-bold">Pengganti</th>
-                <th v-if="isSuperAdmin" class="px-4 py-4 font-bold text-center">Aksi</th>
+                <th class="px-4 py-4 font-bold text-center">Aksi</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -282,7 +287,10 @@
                 <td class="px-4 py-3 font-medium" :class="h.pengganti !== '-' ? 'text-emerald-600' : 'text-gray-500'">
                   {{ h.pengganti }}
                 </td>
-                <td v-if="isSuperAdmin" class="px-4 py-3 text-center">
+                <td class="px-4 py-3 text-center">
+                  <button @click="openSubstituteModal(h)" class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50">
+                    <SvgIcon name="pencil" :size="13" /> Edit
+                  </button>
                   <button
                     @click="deleteHistoryItem(h)"
                     :disabled="deletingHistoryId === h.id"
@@ -294,7 +302,7 @@
                 </td>
               </tr>
               <tr v-if="filteredHistory.length === 0">
-                <td :colspan="isSuperAdmin ? 6 : 5" class="px-4 py-8 text-center text-gray-500">Tidak ada riwayat ditemukan</td>
+                <td colspan="6" class="px-4 py-8 text-center text-gray-500">Tidak ada riwayat ditemukan</td>
               </tr>
             </tbody>
           </table>
@@ -304,6 +312,60 @@
     </div>
 
     <!-- Edit Absence Modal -->
+        <!-- Substitute History Modal -->
+        <Teleport to="body">
+          <div v-if="substituteModal.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="closeSubstituteModal">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+              <h3 class="text-base font-bold text-gray-800 mb-4">{{ substituteModal.editingId ? 'Edit Riwayat Guru Pengganti' : 'Tambah Riwayat Guru Pengganti' }}</h3>
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Tanggal <span class="text-red-500">*</span></label>
+                  <input v-model="substituteForm.date" type="date" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Sesi</label>
+                  <select v-model="substituteForm.session" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                    <option value="">Pilih sesi...</option>
+                    <option value="Shubuh">Shubuh</option>
+                    <option value="Ashar">Ashar</option>
+                    <option value="Isya">Isya</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Guru Asli <span class="text-red-500">*</span></label>
+                  <select v-model="substituteForm.original_teacher_id" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                    <option value="">Pilih guru asli...</option>
+                    <option v-for="t in teachers" :key="t.id" :value="t.id">{{ t.name }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Status Guru Asli</label>
+                  <select v-model="substituteForm.status" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                    <option value="">Pilih status...</option>
+                    <option value="Izin">Izin</option>
+                    <option value="Sakit">Sakit</option>
+                    <option value="Alpha">Alpha</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Guru Pengganti <span class="text-red-500">*</span></label>
+                  <select v-model="substituteForm.substitute_teacher_id" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                    <option value="">Pilih guru pengganti...</option>
+                    <option v-for="t in teachers" :key="t.id" :value="t.id">{{ t.name }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Alasan</label>
+                  <input v-model="substituteForm.reason" type="text" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="Alasan opsional..." />
+                </div>
+              </div>
+              <div class="flex gap-2 mt-5">
+                <button @click="closeSubstituteModal" class="flex-1 h-9 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
+                <button @click="saveSubstituteHistory" :disabled="savingSubstitute" class="flex-1 h-9 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50">{{ savingSubstitute ? 'Menyimpan...' : 'Simpan' }}</button>
+              </div>
+            </div>
+          </div>
+        </Teleport>
     <Teleport to="body">
       <div v-if="editingAbsence" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="editingAbsence = null">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
@@ -350,6 +412,63 @@ const authStore = useAuthStore()
 const toast = useToastStore()
 const isSuperAdmin = computed(() => authStore.userRoles?.some((role) => role.name === 'super_admin'))
 const deletingHistoryId = ref(null)
+
+// Substitute history modal
+const substituteModal = ref({ open: false, editingId: null })
+const substituteForm = ref({ date: '', session: '', original_teacher_id: '', substitute_teacher_id: '', status: '', reason: '' })
+const savingSubstitute = ref(false)
+
+function openSubstituteModal(item = null) {
+  substituteModal.value = { open: true, editingId: item?.id || null }
+  if (item) {
+    substituteForm.value = {
+      date: item.tanggal || '',
+      session: item.sesi || '',
+      original_teacher_id: item.original_teacher_id || '',
+      substitute_teacher_id: item.substitute_teacher_id || '',
+      status: item.status || '',
+      reason: item.reason || ''
+    }
+  } else {
+    substituteForm.value = { date: '', session: '', original_teacher_id: '', substitute_teacher_id: '', status: '', reason: '' }
+  }
+}
+
+function closeSubstituteModal() {
+  substituteModal.value = { open: false, editingId: null }
+}
+
+async function saveSubstituteHistory() {
+  const f = substituteForm.value
+  if (!f.date || !f.original_teacher_id || !f.substitute_teacher_id) {
+    toast.error('Tanggal, guru asli, dan guru pengganti wajib diisi')
+    return
+  }
+  savingSubstitute.value = true
+  try {
+    const payload = {
+      date: f.date,
+      session: f.session,
+      original_teacher_id: Number(f.original_teacher_id),
+      substitute_teacher_id: Number(f.substitute_teacher_id),
+      status: f.status,
+      reason: f.reason
+    }
+    if (substituteModal.value.editingId) {
+      await api.put(`/halaqoh/substitute-history/${substituteModal.value.editingId}`, payload)
+      toast.success('Riwayat guru pengganti berhasil diperbarui')
+    } else {
+      await api.post('/halaqoh/substitute-history', payload)
+      toast.success('Riwayat guru pengganti berhasil ditambahkan')
+    }
+    closeSubstituteModal()
+    await fetchStats()
+  } catch (err) {
+    toast.error(err.response?.data?.error || 'Gagal menyimpan riwayat guru pengganti')
+  } finally {
+    savingSubstitute.value = false
+  }
+}
 
 const getLocalDateString = (date = new Date()) => {
   const offsetMs = date.getTimezoneOffset() * 60000
