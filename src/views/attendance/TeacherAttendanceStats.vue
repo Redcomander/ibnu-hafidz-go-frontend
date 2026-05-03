@@ -778,6 +778,11 @@ async function deleteSubstituteHistory(item) {
 }
 
 async function openSubstituteModal(item = null) {
+  const normalizeTimeValue = (value) => {
+    const raw = String(value || '').trim()
+    if (!raw || raw === '-') return ''
+    return raw.slice(0, 5)
+  }
   substituteModal.value.open = true
   substituteModal.value.editingId = item?.id || null
   substituteForm.value = {
@@ -785,8 +790,8 @@ async function openSubstituteModal(item = null) {
     jadwal_id: item?.jadwal_id || '',
     lesson: item?.lesson || '',
     kelas: item?.kelas || '',
-    jam_mulai: item?.jam_mulai ? String(item.jam_mulai).slice(0, 5) : '',
-    jam_selesai: item?.jam_selesai ? String(item.jam_selesai).slice(0, 5) : '',
+    jam_mulai: normalizeTimeValue(item?.jam_mulai),
+    jam_selesai: normalizeTimeValue(item?.jam_selesai),
     original_teacher_id: item?.original_teacher_id || '',
     status: item?.original_status || 'Izin',
     substitute_teacher_id: item?.substitute_teacher_id || '',
