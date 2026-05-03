@@ -356,7 +356,7 @@
               <select v-model="substituteForm.jadwal_id" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
                 <option value="">{{ requiresScheduleForSubstitute ? 'Pilih jadwal...' : 'Tanpa jadwal (input manual)' }}</option>
                 <option v-for="opt in substituteScheduleOptions" :key="opt.id" :value="opt.id">
-                  {{ opt.lesson }} - {{ opt.kelas }}
+                  - - ({{ opt.kelas || '-' }})
                 </option>
               </select>
             </div>
@@ -366,7 +366,15 @@
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-600 mb-1">Kelas</label>
-              <input v-model="substituteForm.kelas" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="Contoh: A 1" />
+              <select v-model="substituteForm.kelas" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                <option value="">Pilih kelas...</option>
+                <option v-if="substituteForm.kelas && !kelasList.some((k) => `${k?.nama || ''} ${k?.tingkat || ''}`.trim() === substituteForm.kelas)" :value="substituteForm.kelas">
+                  {{ substituteForm.kelas }}
+                </option>
+                <option v-for="k in kelasList" :key="`sub-kelas-${k.id}`" :value="`${k?.nama || ''} ${k?.tingkat || ''}`.trim()">
+                  {{ `${k?.nama || ''} ${k?.tingkat || ''}`.trim() }}
+                </option>
+              </select>
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-600 mb-1">Guru Asli</label>
@@ -588,7 +596,7 @@ async function loadSubstituteScheduleOptions() {
         original_teacher_id: row.assignment?.teacher?.id || null,
         original_teacher: row.assignment?.teacher?.name || '-',
       }))
-      .sort((a, b) => a.lesson.localeCompare(b.lesson))
+      .sort((a, b) => a.kelas.localeCompare(b.kelas))
   } catch {
     substituteScheduleOptions.value = []
   }
