@@ -22,14 +22,24 @@ export const useAuthStore = defineStore('auth', () => {
     return perms
   })
 
+  function getPermissionAliases(permission) {
+    const aliases = [permission]
+    if (permission.startsWith('laundry_accounts.')) {
+      aliases.push(permission.replace('laundry_accounts.', 'laundry.'))
+    } else if (permission.startsWith('laundry.')) {
+      aliases.push(permission.replace('laundry.', 'laundry_accounts.'))
+    }
+    return aliases
+  }
+
   // Check if user has a specific permission
   function hasPermission(permission) {
-    return userPermissions.value.has(permission)
+    return getPermissionAliases(permission).some(p => userPermissions.value.has(p))
   }
 
   // Check if user has any of the listed permissions
   function hasAnyPermission(permissions) {
-    return permissions.some(p => userPermissions.value.has(p))
+    return permissions.some(hasPermission)
   }
 
   // Set access token (called after login or refresh)
