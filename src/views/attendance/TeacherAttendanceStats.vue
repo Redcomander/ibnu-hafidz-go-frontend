@@ -162,12 +162,12 @@
         </div>
       </div>
 
-      <!-- Absence History Table (Izin/Sakit/Alpha) -->
+      <!-- Absence History Table (Izin/Sakit/Alpha/Dinas Luar) -->
       <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="p-4 border-b border-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div class="flex items-center gap-2">
             <div class="w-1.5 h-6 bg-rose-500 rounded-full"></div>
-            <h3 class="font-bold text-gray-800">Riwayat Ketidakhadiran Guru (Izin / Sakit / Alpha)</h3>
+            <h3 class="font-bold text-gray-800">Riwayat Ketidakhadiran Guru (Izin / Sakit / Alpha / Dinas Luar)</h3>
           </div>
           <div class="relative w-full sm:w-64">
             <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><SvgIcon name="search" :size="14" /></div>
@@ -322,6 +322,7 @@
                 <option value="Izin">Izin</option>
                 <option value="Sakit">Sakit</option>
                 <option value="Alpha">Alpha</option>
+                <option value="Dinas Luar">Dinas Luar</option>
               </select>
             </div>
             <div>
@@ -353,6 +354,7 @@
                 <option value="Izin">Izin</option>
                 <option value="Sakit">Sakit</option>
                 <option value="Alpha">Alpha</option>
+                <option value="Dinas Luar">Dinas Luar</option>
               </select>
             </div>
             <div>
@@ -601,6 +603,7 @@ function getStatusBadge(status) {
   if (s === 'hadir') return 'bg-emerald-100 text-emerald-700'
   if (s === 'izin') return 'bg-blue-100 text-blue-700'
   if (s === 'sakit') return 'bg-amber-100 text-amber-700'
+  if (s === 'dinas luar') return 'bg-violet-100 text-violet-700'
   return 'bg-rose-100 text-rose-700'
 }
 
