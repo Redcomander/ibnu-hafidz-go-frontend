@@ -97,10 +97,10 @@
                 <span :class="sessionBadgeClass(record.session)">{{ record.session }}</span>
               </td>
               <td class="px-4 py-3 font-medium text-gray-800">
-                {{ record.halaqoh_assignment?.student?.nama_lengkap || '-' }}
+                {{ record.snapshot?.student_name || record.halaqoh_assignment?.student?.nama_lengkap || '-' }}
               </td>
               <td class="px-4 py-3 text-gray-600">
-                {{ record.halaqoh_assignment?.teacher?.name || '-' }}
+                {{ record.snapshot?.teacher_name || record.halaqoh_assignment?.teacher?.name || '-' }}
               </td>
               <td class="px-4 py-3 text-center">
                 <span :class="statusBadgeClass(record.status)">{{ record.status }}</span>
