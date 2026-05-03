@@ -451,7 +451,10 @@ async function saveAbsenceEdit() {
   if (!editingAbsence.value) return
   savingAbsence.value = true
   try {
-    await api.put(`/halaqoh/teacher-attendance-record/${editingAbsence.value.id}`, editAbsenceForm.value)
+    const source = editingAbsence.value.source || 'teacher_attendance'
+    await api.put(`/halaqoh/teacher-attendance-record/${editingAbsence.value.id}`, editAbsenceForm.value, {
+      params: { source }
+    })
     toast.success('Data absensi berhasil diperbarui')
     editingAbsence.value = null
     await fetchStats()
@@ -468,7 +471,10 @@ async function deleteAbsenceRecord(item) {
   if (!ok) return
   deletingAbsenceId.value = item.id
   try {
-    await api.delete(`/halaqoh/teacher-attendance-record/${item.id}`)
+    const source = item.source || 'teacher_attendance'
+    await api.delete(`/halaqoh/teacher-attendance-record/${item.id}`, {
+      params: { source }
+    })
     toast.success('Data absensi guru halaqoh berhasil dihapus')
     await fetchStats()
   } catch (err) {
