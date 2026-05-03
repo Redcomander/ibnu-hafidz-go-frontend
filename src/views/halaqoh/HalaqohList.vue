@@ -557,6 +557,12 @@ function getHelperName(group) {
 }
 
 function canOpenTeacherAttendance(group) {
+  const hasTeacherAttendanceAccess = auth.hasPermission('halaqoh.view_all') ||
+    auth.userRoles?.some((role) => ['super_admin', 'admin', 'tim_presensi'].includes(role.name))
+  if (!hasTeacherAttendanceAccess) {
+    return false
+  }
+
   const access = getAccessInfo(group.teacher_id)
   return !!(access.can_manage || access.is_substitute || store.currentUserId === group.teacher_id)
 }
