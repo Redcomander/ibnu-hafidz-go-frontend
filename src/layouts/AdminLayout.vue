@@ -512,6 +512,14 @@ const navItems = [
     permission: "prestasi.view",
     menuKey: 'prestasi',
   },
+  {
+    to: "/dashboard/ocr",
+    icon: "document",
+    label: "Scanner Lembar Jawab",
+    permission: "dashboard.view",
+    activeOn: ["/dashboard/ocr"],
+    menuKey: 'ocr_scanner',
+  },
 
   { header: 'Laundry & Sarpras' },
   {

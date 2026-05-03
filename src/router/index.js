@@ -326,6 +326,13 @@ const routes = [
         component: () => import('@/views/settings/SettingsView.vue'),
         meta: { title: 'Pengaturan Sidebar', roles: ['super_admin'] },
       },
+      // ---- OCR Scanner ----
+      {
+        path: 'ocr',
+        name: 'ocr',
+        component: () => import('@/views/ocr/OcrView.vue'),
+        meta: { title: 'Scanner Lembar Jawab' },
+      },
     ],
   },
 
