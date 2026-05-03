@@ -436,7 +436,7 @@ function formatDate(dateStr) {
 }
 
 function canModifyAbsenceEntry(item) {
-  return item?.source !== 'substitute_log'
+  return !!item?.id
 }
 
 onMounted(async () => {
@@ -503,7 +503,12 @@ async function saveAbsenceEdit() {
   if (!editingAbsence.value) return
   savingAbsence.value = true
   try {
-    await api.put(`/attendance/teacher-record/${editingAbsence.value.id}`, editAbsenceForm.value)
+    await api.put(`/attendance/teacher-record/${editingAbsence.value.id}`, editAbsenceForm.value, {
+      params: {
+        source: editingAbsence.value.source || 'teacher_attendance',
+        type: attendanceType.value,
+      },
+    })
     toast.success('Data absensi berhasil diperbarui')
     editingAbsence.value = null
     await fetchStats()
@@ -520,7 +525,12 @@ async function deleteAbsenceRecord(item) {
   if (!ok) return
   deletingAbsenceId.value = item.id
   try {
-    await api.delete(`/attendance/teacher-record/${item.id}`)
+    await api.delete(`/attendance/teacher-record/${item.id}`, {
+      params: {
+        source: item.source || 'teacher_attendance',
+        type: attendanceType.value,
+      },
+    })
     toast.success('Data absensi berhasil dihapus')
     await fetchStats()
   } catch (err) {
