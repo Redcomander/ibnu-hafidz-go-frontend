@@ -32,5 +32,9 @@ export const ocrDeleteAnswerKey = (id) => api.delete(`${BASE}/answer-key/${id}`)
 export const ocrGetResults = (params) => api.get(`${BASE}/results`, { params })
 export const ocrDeleteResult = (id) => api.delete(`${BASE}/results/${id}`)
 
+// Persisted result links (Go backend)
+export const ocrGetResultLinks = (params) => api.get(`${BASE}/result-links`, { params })
+export const ocrCreateResultLink = (data) => api.post(`${BASE}/result-links`, data)
+
 // Service capabilities
 export const ocrCapabilities = () => api.get(`${BASE}/capabilities`)

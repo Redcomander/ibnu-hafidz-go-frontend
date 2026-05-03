@@ -423,6 +423,65 @@
       </div>
     </transition>
 
+    <!-- Persisted Integrated Result Cards -->
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-bold text-gray-800">Result Page Integrasi</h2>
+        <button @click="loadSavedResultLinks" class="text-xs text-primary hover:underline">Refresh</button>
+      </div>
+
+      <div v-if="loadingSavedResultLinks" class="bg-white rounded-2xl border border-gray-100 p-4 text-sm text-gray-500">
+        Memuat data hasil tersimpan...
+      </div>
+
+      <div v-else-if="savedResultGroups.length === 0" class="bg-white rounded-2xl border border-gray-100 p-4 text-sm text-gray-400 italic">
+        Belum ada hasil tersimpan.
+      </div>
+
+      <div v-else class="space-y-3">
+        <div v-for="group in savedResultGroups" :key="group.key"
+          class="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+            <div class="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2">
+              <p class="text-[11px] uppercase tracking-wide text-gray-400">Pelajaran</p>
+              <p class="font-semibold text-gray-800 mt-0.5">{{ group.lessonName }}</p>
+            </div>
+            <div class="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2">
+              <p class="text-[11px] uppercase tracking-wide text-gray-400">Kelas</p>
+              <p class="font-semibold text-gray-800 mt-0.5">{{ group.kelasName }}</p>
+            </div>
+            <div class="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2">
+              <p class="text-[11px] uppercase tracking-wide text-gray-400">Guru</p>
+              <p class="font-semibold text-gray-800 mt-0.5">{{ group.teacherName }}</p>
+            </div>
+          </div>
+
+          <div class="rounded-lg bg-gray-50 border border-gray-100 p-3">
+            <p class="text-[11px] uppercase tracking-wide text-gray-400 mb-2">Semua Santri Kelas ({{ group.students.length }})</p>
+            <div v-if="group.students.length" class="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+              <div v-for="(s, idx) in group.students" :key="s.id || idx"
+                class="flex items-center justify-between gap-2 text-sm rounded-md border border-gray-100 bg-white px-2.5 py-1.5">
+                <span class="font-medium text-gray-700 truncate">{{ studentLabel(s) }}</span>
+                <span class="text-[11px] text-gray-400">#{{ idx + 1 }}</span>
+              </div>
+            </div>
+            <p v-else class="text-xs text-gray-400 italic">Belum ada data santri untuk kelas ini.</p>
+          </div>
+
+          <details class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <summary class="text-xs font-semibold text-gray-600 cursor-pointer">Riwayat Scan ({{ group.results.length }})</summary>
+            <div class="mt-2 space-y-1.5">
+              <div v-for="item in group.results.slice(0, 8)" :key="item.id"
+                class="flex items-center justify-between rounded-md border border-gray-100 bg-white px-2.5 py-1.5 text-sm">
+                <span class="truncate text-gray-700">{{ item.filename || `${item.source || 'scan'} #${item.id}` }}</span>
+                <span class="font-semibold text-gray-800">{{ item.score ?? '–' }}</span>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+
     <!-- Answer Key Modal -->
     <teleport to="body">
       <transition name="fade">
@@ -496,6 +555,7 @@ import api from '@/api'
 import {
   ocrHealth, ocrScan, ocrScanBulk, ocrScanHardware,
   ocrScannerDevices, ocrGetAnswerKeys, ocrSaveAnswerKey, ocrDeleteAnswerKey,
+  ocrGetResultLinks, ocrCreateResultLink,
 } from '@/api/ocr.js'
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -523,6 +583,8 @@ const scanProgress = ref(0)
 const scanError = ref(null)
 const lastResult = ref(null)
 const bulkResults = ref([])
+const savedResultLinks = ref([])
+const loadingSavedResultLinks = ref(false)
 
 // Scanner hardware
 const scannerDevices = ref([])
@@ -565,6 +627,7 @@ onMounted(async () => {
   }
   await loadAnswerKeys()
   await loadAcademicData()
+  await loadSavedResultLinks()
 })
 
 // ─── File Handling ────────────────────────────────────────────────────────────
@@ -639,6 +702,8 @@ async function doScan() {
 
     const res = await ocrScan(fd)
     lastResult.value = addResultContext(res.data)
+    await saveResultLink(lastResult.value, 'scan')
+    await loadSavedResultLinks()
   } catch (err) {
     scanError.value = err.response?.data?.message || err.response?.data?.error || err.message || 'Gagal memproses gambar'
   } finally {
@@ -664,6 +729,9 @@ async function doScanBulk() {
     const res = await ocrScanBulk(fd)
     const raw = res.data?.results || []
     bulkResults.value = raw.map(item => addResultContext(item))
+    const savable = bulkResults.value.filter(item => !item?.error)
+    await Promise.all(savable.map(item => saveResultLink(item, 'scan-bulk')))
+    await loadSavedResultLinks()
   } catch (err) {
     scanError.value = err.response?.data?.message || err.message || 'Gagal memproses gambar'
   } finally {
@@ -688,6 +756,8 @@ async function doHardwareScan() {
 
     const res = await ocrScanHardware(fd)
     lastResult.value = addResultContext(res.data)
+    await saveResultLink(lastResult.value, 'scan-hardware')
+    await loadSavedResultLinks()
   } catch (err) {
     scanError.value = err.response?.data?.message || err.message || 'Gagal scan dengan scanner'
   } finally {
@@ -730,6 +800,45 @@ async function loadAcademicData() {
     loadTeachers(),
   ])
   await handleLessonOrClassChange()
+}
+
+async function loadSavedResultLinks() {
+  loadingSavedResultLinks.value = true
+  try {
+    const params = { per_page: 200 }
+    if (selectedClassId.value) params.kelas_id = selectedClassId.value
+    if (selectedLessonId.value) params.lesson_id = selectedLessonId.value
+    const res = await ocrGetResultLinks(params)
+    savedResultLinks.value = Array.isArray(res.data?.data) ? res.data.data : []
+  } catch {
+    savedResultLinks.value = []
+  } finally {
+    loadingSavedResultLinks.value = false
+  }
+}
+
+async function saveResultLink(result, source) {
+  const ctx = getResultContext(result)
+  const payload = {
+    source,
+    filename: result?.filename || result?.fileName || null,
+    score: result?.score ?? null,
+    correct: result?.correct ?? null,
+    wrong: result?.wrong ?? null,
+    blank: result?.blank ?? null,
+    raw_result: result || null,
+    lesson_type: lessonType.value,
+    lesson_id: ctx.lessonId || null,
+    kelas_id: ctx.classId || null,
+    teacher_id: ctx.teacherId || null,
+    answer_key_id: selectedAnswerKeyId.value || null,
+  }
+
+  try {
+    await ocrCreateResultLink(payload)
+  } catch {
+    // Do not block OCR flow when persistence fails.
+  }
 }
 
 async function loadLessons() {
@@ -896,6 +1005,39 @@ function addResultContext(result) {
 function getResultContext(result) {
   return result?.metaContext || buildResultContext()
 }
+
+const savedResultGroups = computed(() => {
+  const map = new Map()
+
+  for (const item of savedResultLinks.value) {
+    const lessonName = item?.lesson?.name || 'Pelajaran belum dipilih'
+    const kelasName = item?.kelas ? classLabel(item.kelas) : 'Kelas belum dipilih'
+    const key = `${item?.lesson_id || 0}-${item?.kelas_id || 0}`
+
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        lessonName,
+        kelasName,
+        teacherName: item?.teacher?.name || 'Guru belum dipilih',
+        students: Array.isArray(item?.kelas?.students) ? item.kelas.students : [],
+        results: [],
+      })
+    }
+
+    const group = map.get(key)
+    if (!group.teacherName || group.teacherName === 'Guru belum dipilih') {
+      group.teacherName = item?.teacher?.name || group.teacherName
+    }
+    if ((!group.students || group.students.length === 0) && Array.isArray(item?.kelas?.students)) {
+      group.students = item.kelas.students
+    }
+
+    group.results.push(item)
+  }
+
+  return Array.from(map.values())
+})
 </script>
 
 <style scoped>
