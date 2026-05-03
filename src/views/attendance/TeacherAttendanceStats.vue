@@ -254,6 +254,8 @@
                 <th class="px-4 py-3 text-left">Tanggal</th>
                 <th class="px-4 py-3 text-left">Pelajaran</th>
                 <th class="px-4 py-3 text-left">Kelas</th>
+                <th class="px-4 py-3 text-left">Jam Mulai</th>
+                <th class="px-4 py-3 text-left">Jam Selesai</th>
                 <th class="px-4 py-3 text-left">Guru Asli</th>
                 <th class="px-4 py-3 text-center">Status</th>
                 <th class="px-4 py-3 text-left">Pengganti</th>
@@ -265,6 +267,8 @@
                 <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{{ formatDate(s.date) }}</td>
                 <td class="px-4 py-3 font-medium">{{ s.lesson }}</td>
                 <td class="px-4 py-3 text-gray-500">{{ s.kelas }}</td>
+                <td class="px-4 py-3 text-gray-500 whitespace-nowrap">{{ s.jam_mulai || '-' }}</td>
+                <td class="px-4 py-3 text-gray-500 whitespace-nowrap">{{ s.jam_selesai || '-' }}</td>
                 <td class="px-4 py-3 text-gray-600">{{ s.original_teacher }}</td>
                 <td class="px-4 py-3 text-center">
                   <span :class="[getStatusBadge(s.original_status), 'px-2 py-0.5 rounded text-[10px] font-bold uppercase']">
@@ -293,7 +297,7 @@
                 </td>
               </tr>
               <tr v-if="!filteredSubstituteHistory.length">
-                <td :colspan="isSuperAdmin ? 7 : 6" class="px-4 py-12 text-center text-gray-400">Tidak ada riwayat penggantian</td>
+                <td :colspan="isSuperAdmin ? 9 : 8" class="px-4 py-12 text-center text-gray-400">Tidak ada riwayat penggantian</td>
               </tr>
             </tbody>
           </table>
@@ -380,6 +384,14 @@
                 label-key="name"
                 value-key="id"
               />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Jam Mulai</label>
+              <input v-model="substituteForm.jam_mulai" type="time" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Jam Selesai</label>
+              <input v-model="substituteForm.jam_selesai" type="time" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none" />
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-600 mb-1">Guru Asli</label>
@@ -482,6 +494,8 @@ const substituteForm = ref({
   jadwal_id: '',
   lesson: '',
   kelas: '',
+  jam_mulai: '',
+  jam_selesai: '',
   original_teacher_id: '',
   status: 'Izin',
   substitute_teacher_id: '',
@@ -649,6 +663,8 @@ async function loadSubstituteScheduleOptions() {
         id: row.id,
         lesson: row.assignment?.lesson?.nama || row.assignment?.diniyyah_lesson?.nama || '-',
         kelas: `${row.assignment?.kelas?.nama || ''} ${row.assignment?.kelas?.tingkat || ''}`.trim(),
+        jam_mulai: (row.start_time || '').toString().slice(0, 5),
+        jam_selesai: (row.end_time || '').toString().slice(0, 5),
         original_teacher_id: row.assignment?.teacher?.id || null,
         original_teacher: row.assignment?.teacher?.name || '-',
       }))
@@ -769,6 +785,8 @@ async function openSubstituteModal(item = null) {
     jadwal_id: item?.jadwal_id || '',
     lesson: item?.lesson || '',
     kelas: item?.kelas || '',
+    jam_mulai: item?.jam_mulai ? String(item.jam_mulai).slice(0, 5) : '',
+    jam_selesai: item?.jam_selesai ? String(item.jam_selesai).slice(0, 5) : '',
     original_teacher_id: item?.original_teacher_id || '',
     status: item?.original_status || 'Izin',
     substitute_teacher_id: item?.substitute_teacher_id || '',
@@ -795,12 +813,14 @@ watch(() => substituteForm.value.jadwal_id, (value) => {
   if (!selected) return
   // For optional schedule selection, only prefill class label.
   substituteForm.value.kelas = selected.kelas || substituteForm.value.kelas
+  substituteForm.value.jam_mulai = selected.jam_mulai || substituteForm.value.jam_mulai
+  substituteForm.value.jam_selesai = selected.jam_selesai || substituteForm.value.jam_selesai
 })
 
 async function saveSubstituteHistory() {
   const requiresSchedule = requiresScheduleForSubstitute.value
-  if (!substituteForm.value.date || !substituteForm.value.substitute_teacher_id || !substituteForm.value.original_teacher_id || !substituteForm.value.lesson || !substituteForm.value.kelas) {
-    toast.error('Tanggal, pelajaran, kelas, guru asli, dan pengganti wajib diisi')
+  if (!substituteForm.value.date || !substituteForm.value.substitute_teacher_id || !substituteForm.value.original_teacher_id || !substituteForm.value.lesson || !substituteForm.value.kelas || !substituteForm.value.jam_mulai || !substituteForm.value.jam_selesai) {
+    toast.error('Tanggal, pelajaran, kelas, jam mulai, jam selesai, guru asli, dan pengganti wajib diisi')
     return
   }
   if (requiresSchedule && !substituteForm.value.jadwal_id) {
@@ -817,6 +837,8 @@ async function saveSubstituteHistory() {
       date: substituteForm.value.date,
       lesson: substituteForm.value.lesson,
       kelas: substituteForm.value.kelas,
+      jam_mulai: substituteForm.value.jam_mulai,
+      jam_selesai: substituteForm.value.jam_selesai,
       status: substituteForm.value.status,
       reason: substituteForm.value.reason,
     }
