@@ -111,8 +111,10 @@ export const useNotificationStore = defineStore('notification', () => {
             }
         };
 
-        eventSource.value.onerror = (err) => {
-            console.error('SSE Error', err);
+        eventSource.value.onerror = () => {
+            if (import.meta.env.DEV) {
+                console.warn('SSE disconnected, reconnecting...');
+            }
             isConnected.value = false;
 
             // Stop current stream instance to prevent native infinite retry loops.

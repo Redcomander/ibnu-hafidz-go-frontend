@@ -353,42 +353,53 @@
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-600 mb-1">Jadwal {{ requiresScheduleForSubstitute ? '' : '(opsional)' }}</label>
-              <select v-model="substituteForm.jadwal_id" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
-                <option value="">{{ requiresScheduleForSubstitute ? 'Pilih jadwal...' : 'Tanpa jadwal (input manual)' }}</option>
-                <option v-for="opt in substituteScheduleOptions" :key="opt.id" :value="opt.id">
-                  - - ({{ opt.kelas || '-' }})
-                </option>
-              </select>
+              <SearchableSelect
+                v-model="substituteForm.jadwal_id"
+                :options="jadwalSearchOptions"
+                placeholder="Tanpa jadwal (input manual)"
+                label-key="name"
+                value-key="id"
+              />
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-600 mb-1">Pelajaran</label>
-              <input v-model="substituteForm.lesson" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="Contoh: Nahwu" />
+              <SearchableSelect
+                v-model="substituteForm.lesson"
+                :options="lessonSearchOptions"
+                placeholder="Pilih pelajaran..."
+                label-key="name"
+                value-key="id"
+              />
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-600 mb-1">Kelas</label>
-              <select v-model="substituteForm.kelas" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
-                <option value="">Pilih kelas...</option>
-                <option v-if="substituteForm.kelas && !kelasList.some((k) => `${k?.nama || ''} ${k?.tingkat || ''}`.trim() === substituteForm.kelas)" :value="substituteForm.kelas">
-                  {{ substituteForm.kelas }}
-                </option>
-                <option v-for="k in kelasList" :key="`sub-kelas-${k.id}`" :value="`${k?.nama || ''} ${k?.tingkat || ''}`.trim()">
-                  {{ `${k?.nama || ''} ${k?.tingkat || ''}`.trim() }}
-                </option>
-              </select>
+              <SearchableSelect
+                v-model="substituteForm.kelas"
+                :options="kelasSearchOptions"
+                placeholder="Pilih kelas..."
+                label-key="name"
+                value-key="id"
+              />
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-600 mb-1">Guru Asli</label>
-              <select v-model="substituteForm.original_teacher_id" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
-                <option value="">Pilih guru asli...</option>
-                <option v-for="t in teacherList" :key="`orig-${t.id}`" :value="t.id">{{ t.name }}</option>
-              </select>
+              <SearchableSelect
+                v-model="substituteForm.original_teacher_id"
+                :options="teacherSearchOptions"
+                placeholder="Pilih guru asli..."
+                label-key="name"
+                value-key="id"
+              />
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-600 mb-1">Pengganti</label>
-              <select v-model="substituteForm.substitute_teacher_id" class="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
-                <option value="">Pilih guru pengganti...</option>
-                <option v-for="t in teacherList" :key="t.id" :value="t.id">{{ t.name }}</option>
-              </select>
+              <SearchableSelect
+                v-model="substituteForm.substitute_teacher_id"
+                :options="teacherSearchOptions"
+                placeholder="Pilih guru pengganti..."
+                label-key="name"
+                value-key="id"
+              />
             </div>
           </div>
           <div class="mt-3">
@@ -410,6 +421,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/api'
 import SvgIcon from '@/components/ui/SvgIcon.vue'
+import SearchableSelect from '@/components/ui/SearchableSelect.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { format } from 'date-fns'
@@ -431,6 +443,7 @@ const loading = ref(false)
 const exporting = ref(null)
 const kelasList = ref([])
 const teacherList = ref([])
+const lessonList = ref([])
 
 // Filters — default to current month
 const now = new Date()
@@ -481,6 +494,48 @@ const requiresScheduleForSubstitute = computed(() => false) // schedule is alway
 const selectedScheduleMeta = computed(() => {
   const selectedId = Number(substituteForm.value.jadwal_id)
   return substituteScheduleOptions.value.find((item) => item.id === selectedId) || null
+})
+
+const lessonOptions = computed(() => {
+  const values = lessonList.value
+    .map((l) => (l?.name || l?.nama || '').trim())
+    .filter(Boolean)
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b))
+})
+
+const jadwalSearchOptions = computed(() => {
+  return [
+    { id: '', name: 'Tanpa jadwal (input manual)' },
+    ...substituteScheduleOptions.value.map((opt) => ({
+    id: opt.id,
+    name: `- - (${opt.kelas || '-'})`,
+    })),
+  ]
+})
+
+const lessonSearchOptions = computed(() => {
+  const base = lessonOptions.value.map((name) => ({ id: name, name }))
+  if (substituteForm.value.lesson && !base.some((item) => item.id === substituteForm.value.lesson)) {
+    return [{ id: substituteForm.value.lesson, name: substituteForm.value.lesson }, ...base]
+  }
+  return base
+})
+
+const kelasSearchOptions = computed(() => {
+  const base = kelasList.value
+    .map((k) => `${k?.nama || ''} ${k?.tingkat || ''}`.trim())
+    .filter(Boolean)
+    .map((name) => ({ id: name, name }))
+  if (substituteForm.value.kelas && !base.some((item) => item.id === substituteForm.value.kelas)) {
+    return [{ id: substituteForm.value.kelas, name: substituteForm.value.kelas }, ...base]
+  }
+  return base
+})
+
+const teacherSearchOptions = computed(() => {
+  return (teacherList.value || [])
+    .map((t) => ({ id: t.id, name: t.name }))
+    .filter((t) => !!t.id && !!t.name)
 })
 
 const teacherCards = computed(() => [
@@ -549,11 +604,12 @@ function canModifyAbsenceEntry(item) {
 }
 
 onMounted(async () => {
-  await Promise.all([fetchStats(), fetchKelas(), fetchTeachers()])
+  await Promise.all([fetchStats(), fetchKelas(), fetchTeachers(), fetchLessons()])
 })
 
 // watch for route type changes (Formal <-> Diniyyah)
 watch(() => route.name, () => {
+  fetchLessons()
   fetchStats()
 })
 
@@ -617,6 +673,15 @@ async function fetchTeachers() {
     teacherList.value = res.data.data || res.data || []
   } catch {
     teacherList.value = []
+  }
+}
+
+async function fetchLessons() {
+  try {
+    const res = await api.get('/lessons', { params: { type: attendanceType.value } })
+    lessonList.value = Array.isArray(res.data) ? res.data : []
+  } catch {
+    lessonList.value = []
   }
 }
 
@@ -710,11 +775,6 @@ async function openSubstituteModal(item = null) {
     reason: item?.reason || '',
   }
   await loadSubstituteScheduleOptions()
-  if (!item && selectedScheduleMeta.value) {
-    substituteForm.value.lesson = selectedScheduleMeta.value.lesson || ''
-    substituteForm.value.kelas = selectedScheduleMeta.value.kelas || ''
-    substituteForm.value.original_teacher_id = selectedScheduleMeta.value.original_teacher_id || ''
-  }
 }
 
 function closeSubstituteModal() {
@@ -733,9 +793,8 @@ watch(() => substituteForm.value.date, async () => {
 watch(() => substituteForm.value.jadwal_id, (value) => {
   const selected = substituteScheduleOptions.value.find((opt) => opt.id === Number(value))
   if (!selected) return
-  substituteForm.value.lesson = selected.lesson || substituteForm.value.lesson
+  // For optional schedule selection, only prefill class label.
   substituteForm.value.kelas = selected.kelas || substituteForm.value.kelas
-  substituteForm.value.original_teacher_id = selected.original_teacher_id || substituteForm.value.original_teacher_id
 })
 
 async function saveSubstituteHistory() {
