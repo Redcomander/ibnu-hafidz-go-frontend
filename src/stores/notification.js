@@ -40,9 +40,9 @@ export const useNotificationStore = defineStore('notification', () => {
             const apiBase = import.meta.env.VITE_API_URL;
             if (apiBase) {
                 const base = apiBase.replace(/\/$/, '');
-                return `${base}/notifications/stream?ticket=${encodeURIComponent(ticket)}`;
+                return `${base}/notifications/stream?token=${encodeURIComponent(ticket)}`;
             }
-            return `/api/notifications/stream?ticket=${encodeURIComponent(ticket)}`;
+            return `/api/notifications/stream?token=${encodeURIComponent(ticket)}`;
         } catch (e) {
             console.error('Failed to get SSE ticket', e);
             return null;
