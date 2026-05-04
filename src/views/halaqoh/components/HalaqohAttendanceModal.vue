@@ -195,7 +195,7 @@ async function loadAttendance() {
           halaqoh_assignment_id: a.id,
           student_id: a.student_id,
           student_name: a.student?.nama_lengkap || a.student?.name || `Santri #${a.student_id}`,
-          status: existing?.status || 'hadir',
+          status: existing?.status || '',
           notes: existing?.notes || '',
         }
       })
@@ -215,11 +215,20 @@ async function loadAttendance() {
 }
 
 async function submit() {
+  const hasMissingStatus = currentRecords.value.some((record) => !record.status)
+  if (hasMissingStatus) {
+    toast.error('Status absensi wajib dipilih untuk semua santri')
+    return
+  }
+
   saving.value = true
   try {
     await store.submitSessionAttendance(activeSession.value, {
       date: props.date,
-      records: currentRecords.value,
+      records: currentRecords.value.map((record) => ({
+        ...record,
+        status: String(record.status || '').trim().toLowerCase(),
+      })),
     })
     toast.success(`Absensi ${activeSession.value} berhasil disimpan!`)
     submittedSessions.value.add(activeSession.value)

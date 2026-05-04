@@ -146,6 +146,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import Modal from '@/components/ui/Modal.vue';
 import { useAbsensiStore } from '@/stores/absensi';
 import { useAuthStore } from '@/stores/auth';
+import { useToastStore } from '@/stores/toast';
 
 const props = defineProps({
     show: Boolean,
@@ -164,6 +165,7 @@ const emit = defineEmits(['close', 'updated']);
 
 const store = useAbsensiStore();
 const authStore = useAuthStore();
+const toast = useToastStore();
 const loading = ref(true);
 const submitting = ref(false);
 const students = ref([]);
@@ -203,7 +205,7 @@ const loadAttendance = async () => {
         students.value = (data.students || []).map(s => ({
             ...s,
             student_id: s.student_id,
-            status: s.status || 'hadir', // Default to hadir if empty
+            status: s.status || '',
             catatan: s.catatan || ''
         }));
     } catch (e) {
@@ -238,6 +240,12 @@ const statusColor = (status) => {
 };
 
 const saveAttendance = async () => {
+    const missingStatus = students.value.some(s => !s.status);
+    if (missingStatus) {
+        toast.error('Status absensi wajib dipilih untuk semua santri');
+        return;
+    }
+
     submitting.value = true;
     try {
         const payload = {
