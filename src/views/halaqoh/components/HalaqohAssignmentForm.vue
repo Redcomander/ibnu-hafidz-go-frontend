@@ -140,6 +140,34 @@ const form = ref({
   helper_teacher_id: null,
 })
 
+function normalizePaginatedItems(payload) {
+  if (Array.isArray(payload?.data)) return payload.data
+  if (Array.isArray(payload)) return payload
+  return []
+}
+
+async function fetchAllPages(path, perPage = 1000) {
+  let page = 1
+  let totalPages = 1
+  const allItems = []
+
+  do {
+    const { data } = await api.get(path, { params: { page, per_page: perPage } })
+    allItems.push(...normalizePaginatedItems(data))
+    totalPages = Number(data?.total_pages || 1)
+    page += 1
+  } while (page <= totalPages)
+
+  const uniqueMap = new Map()
+  for (const item of allItems) {
+    if (item?.id != null && !uniqueMap.has(item.id)) {
+      uniqueMap.set(item.id, item)
+    }
+  }
+
+  return Array.from(uniqueMap.values())
+}
+
 const filteredStudents = computed(() => {
   const q = debouncedStudentSearch.value.toLowerCase()
   return allStudents.value.filter(
@@ -168,12 +196,12 @@ function isAssigned(studentId) {
 onMounted(async () => {
   // Fetch teachers + students
   try {
-    const [t, s] = await Promise.all([
-      api.get('/users', { params: { per_page: 999 } }),
-      api.get('/students', { params: { per_page: 999 } }),
+    const [loadedTeachers, loadedStudents] = await Promise.all([
+      fetchAllPages('/users'),
+      fetchAllPages('/students'),
     ])
-    teachers.value = t.data.data || t.data || []
-    allStudents.value = s.data.data || s.data || []
+    teachers.value = loadedTeachers
+    allStudents.value = loadedStudents
 
     // Build assigned set from all groups
     for (const g of store.groups || []) {
