@@ -265,27 +265,38 @@
               </div>
             </div>
 
-            <!-- Per-session attendance badges -->
-            <div class="flex gap-1 flex-shrink-0">
-              <span
-                v-for="sess in sessions"
-                :key="sess"
-                :class="[
-                  'text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full font-medium whitespace-nowrap',
-                  assignment.has_attendance_today?.[sess]
-                    ? sessionStyles[sess].badge
-                    : 'bg-gray-200 text-gray-400',
-                ]"
-                :title="sess + (assignment.has_attendance_today?.[sess] ? ': Sudah absen' : ': Belum absen')"
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <!-- Per-session attendance badges -->
+              <div class="flex gap-1">
+                <span
+                  v-for="sess in sessions"
+                  :key="sess"
+                  :class="[
+                    'text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full font-medium whitespace-nowrap',
+                    assignment.has_attendance_today?.[sess]
+                      ? sessionStyles[sess].badge
+                      : 'bg-gray-200 text-gray-400',
+                  ]"
+                  :title="sess + (assignment.has_attendance_today?.[sess] ? ': Sudah absen' : ': Belum absen')"
+                >
+                  {{ sess.charAt(0) }}
+                  <SvgIcon
+                    v-if="assignment.has_attendance_today?.[sess]"
+                    name="check"
+                    :size="8"
+                    class="inline-block -mt-px"
+                  />
+                </span>
+              </div>
+
+              <button
+                v-if="getAccessInfo(group.teacher_id)?.can_manage"
+                @click.stop="deleteSingleAssignment(assignment)"
+                class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-md transition-colors"
+                title="Hapus santri dari penugasan"
               >
-                {{ sess.charAt(0) }}
-                <SvgIcon
-                  v-if="assignment.has_attendance_today?.[sess]"
-                  name="check"
-                  :size="8"
-                  class="inline-block -mt-px"
-                />
-              </span>
+                <SvgIcon name="trash" :size="12" />
+              </button>
             </div>
           </div>
 
@@ -603,6 +614,18 @@ async function executeDelete() {
     loadData()
   } catch (err) {
     toast.error('Gagal menghapus penugasan')
+  }
+}
+
+async function deleteSingleAssignment(assignment) {
+  if (!assignment?.id) return
+
+  try {
+    await store.deleteAssignment(assignment.id)
+    toast.success('Penugasan santri berhasil dihapus')
+    loadData()
+  } catch (err) {
+    toast.error(err.response?.data?.error || 'Gagal menghapus penugasan santri')
   }
 }
 </script>
