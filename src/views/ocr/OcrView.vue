@@ -108,7 +108,7 @@
         Penyesuaian Posisi Blok Scan
       </summary>
       <div class="mt-3 space-y-3">
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div>
             <label class="text-[11px] uppercase tracking-wide text-gray-400">Rotasi</label>
             <select v-model.number="scanRotation" class="mt-1 w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5">
@@ -131,34 +131,78 @@
           </div>
         </div>
 
-        <div class="space-y-2">
-          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Blok Jawaban</p>
-          <div v-for="(block, idx) in scanCalibration.blocks" :key="idx" class="rounded-xl border border-gray-100 bg-gray-50 p-3">
-            <p class="text-xs font-semibold text-gray-600 mb-2">Blok {{ idx + 1 }} · Q{{ block.startQ }}-{{ block.startQ + block.count - 1 }}</p>
-            <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+        <div class="space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Manual Blok Jawaban</p>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] text-gray-400">Step</span>
+              <select v-model.number="calibrationStep" class="text-xs border border-gray-200 rounded-md px-2 py-1">
+                <option :value="0.005">0.005</option>
+                <option :value="0.01">0.01</option>
+                <option :value="0.02">0.02</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <button
+              v-for="(block, idx) in scanCalibration.blocks"
+              :key="idx"
+              @click="selectedCalibrationBlockIndex = idx"
+              :class="[
+                'rounded-lg border px-2 py-2 text-left',
+                selectedCalibrationBlockIndex === idx
+                  ? 'border-primary bg-primary/5 text-primary'
+                  : 'border-gray-200 bg-gray-50 text-gray-700'
+              ]"
+            >
+              <p class="text-xs font-semibold">Blok {{ idx + 1 }}</p>
+              <p class="text-[10px] opacity-80">Q{{ block.startQ }}-{{ block.startQ + block.count - 1 }}</p>
+            </button>
+          </div>
+
+          <div v-if="selectedCalibrationBlock" class="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-3">
+            <p class="text-xs font-semibold text-gray-700">Atur Blok {{ selectedCalibrationBlockIndex + 1 }} · Q{{ selectedCalibrationBlock.startQ }}-{{ selectedCalibrationBlock.startQ + selectedCalibrationBlock.count - 1 }}</p>
+
+            <div class="grid grid-cols-3 gap-2">
+              <button @click="nudgeBlock('x', -1)" class="rounded-lg border border-gray-200 bg-white py-2 text-sm font-semibold">X-</button>
+              <button @click="nudgeBlock('y', -1)" class="rounded-lg border border-gray-200 bg-white py-2 text-sm font-semibold">Y-</button>
+              <button @click="nudgeBlock('w', -1)" class="rounded-lg border border-gray-200 bg-white py-2 text-sm font-semibold">W-</button>
+              <button @click="nudgeBlock('x', 1)" class="rounded-lg border border-gray-200 bg-white py-2 text-sm font-semibold">X+</button>
+              <button @click="nudgeBlock('y', 1)" class="rounded-lg border border-gray-200 bg-white py-2 text-sm font-semibold">Y+</button>
+              <button @click="nudgeBlock('w', 1)" class="rounded-lg border border-gray-200 bg-white py-2 text-sm font-semibold">W+</button>
+              <button @click="nudgeBlock('h', -1)" class="rounded-lg border border-gray-200 bg-white py-2 text-sm font-semibold">H-</button>
+              <button @click="nudgeBlock('rowTop', -1)" class="rounded-lg border border-gray-200 bg-white py-2 text-sm font-semibold">Top-</button>
+              <button @click="nudgeBlock('rowBottom', -1)" class="rounded-lg border border-gray-200 bg-white py-2 text-sm font-semibold">Bot-</button>
+              <button @click="nudgeBlock('h', 1)" class="rounded-lg border border-gray-200 bg-white py-2 text-sm font-semibold">H+</button>
+              <button @click="nudgeBlock('rowTop', 1)" class="rounded-lg border border-gray-200 bg-white py-2 text-sm font-semibold">Top+</button>
+              <button @click="nudgeBlock('rowBottom', 1)" class="rounded-lg border border-gray-200 bg-white py-2 text-sm font-semibold">Bot+</button>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <div>
                 <label class="text-[10px] text-gray-400">x</label>
-                <input v-model.number="block.x" type="number" step="0.01" min="0" max="1" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+                <input v-model.number="selectedCalibrationBlock.x" type="number" step="0.01" min="0" max="1" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
               </div>
               <div>
                 <label class="text-[10px] text-gray-400">y</label>
-                <input v-model.number="block.y" type="number" step="0.01" min="0" max="1" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+                <input v-model.number="selectedCalibrationBlock.y" type="number" step="0.01" min="0" max="1" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
               </div>
               <div>
                 <label class="text-[10px] text-gray-400">w</label>
-                <input v-model.number="block.w" type="number" step="0.01" min="0.01" max="1" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+                <input v-model.number="selectedCalibrationBlock.w" type="number" step="0.01" min="0.01" max="1" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
               </div>
               <div>
                 <label class="text-[10px] text-gray-400">h</label>
-                <input v-model.number="block.h" type="number" step="0.01" min="0.01" max="1" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+                <input v-model.number="selectedCalibrationBlock.h" type="number" step="0.01" min="0.01" max="1" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
               </div>
               <div>
                 <label class="text-[10px] text-gray-400">rowTop</label>
-                <input v-model.number="block.rowTop" type="number" step="0.01" min="0" max="0.9" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+                <input v-model.number="selectedCalibrationBlock.rowTop" type="number" step="0.01" min="0" max="0.9" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
               </div>
               <div>
                 <label class="text-[10px] text-gray-400">rowBottom</label>
-                <input v-model.number="block.rowBottom" type="number" step="0.01" min="0.1" max="1" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+                <input v-model.number="selectedCalibrationBlock.rowBottom" type="number" step="0.01" min="0.1" max="1" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
               </div>
             </div>
           </div>
@@ -689,6 +733,8 @@ const retryingSaves = ref(false)
 const saveSuccessMessage = ref('')
 const scanRotation = ref(0)
 const scanCalibration = reactive(cloneCalibration(DEFAULT_SCAN_CALIBRATION))
+const selectedCalibrationBlockIndex = ref(0)
+const calibrationStep = ref(0.01)
 
 // Scanner hardware
 const scannerDevices = ref([])
@@ -719,6 +765,7 @@ const selectedClassStudents = ref([])
 const selectedLessonObj = computed(() => lessons.value.find(l => Number(l.id) === Number(selectedLessonId.value)) || null)
 const selectedClassObj = computed(() => classes.value.find(k => Number(k.id) === Number(selectedClassId.value)) || null)
 const selectedTeacherObj = computed(() => teachers.value.find(t => Number(t.id) === Number(selectedTeacherId.value)) || null)
+const selectedCalibrationBlock = computed(() => scanCalibration.blocks?.[selectedCalibrationBlockIndex.value] || null)
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
@@ -1238,6 +1285,28 @@ function applyCalibration(calibration) {
       ...src,
     }
   })
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value))
+}
+
+function nudgeBlock(field, direction) {
+  const block = selectedCalibrationBlock.value
+  if (!block) return
+
+  const step = Number(calibrationStep.value) || 0.01
+  const next = Number(block[field] || 0) + step * direction
+
+  if (field === 'x' || field === 'y' || field === 'rowTop' || field === 'rowBottom') {
+    block[field] = Number(clamp(next, 0, 1).toFixed(4))
+  } else if (field === 'w' || field === 'h' || field === 'questionColW') {
+    block[field] = Number(clamp(next, 0.01, 1).toFixed(4))
+  }
+
+  if (block.rowTop >= block.rowBottom) {
+    block.rowBottom = Number(clamp(block.rowTop + 0.05, 0.1, 1).toFixed(4))
+  }
 }
 
 async function loadCalibrationDefaults() {
