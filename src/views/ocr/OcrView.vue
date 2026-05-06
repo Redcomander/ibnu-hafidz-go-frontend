@@ -161,6 +161,35 @@
             </button>
           </div>
 
+          <div class="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-xs font-semibold text-gray-700">Drag & Drop Overlay</p>
+              <div class="flex items-center gap-1.5">
+                <button @click="zoomOutCalibration" class="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-semibold">-</button>
+                <span class="text-xs text-gray-500 min-w-[3.2rem] text-center">{{ Math.round(calibrationZoom * 100) }}%</span>
+                <button @click="zoomInCalibration" class="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-semibold">+</button>
+              </div>
+            </div>
+
+            <div v-if="calibrationImageSrc" class="rounded-lg border border-gray-200 bg-white overflow-auto max-h-[60vh]">
+              <div ref="calibrationStageRef" class="relative" :style="calibrationStageStyle" @pointermove="onCalibrationPointerMove" @pointerup="onCalibrationPointerUp" @pointercancel="onCalibrationPointerUp">
+                <img :src="calibrationImageSrc" alt="Calibration" class="block w-full h-auto select-none" draggable="false" />
+
+                <button
+                  v-for="(block, idx) in scanCalibration.blocks"
+                  :key="`overlay-${idx}`"
+                  type="button"
+                  :style="calibrationBlockStyle(block, idx)"
+                  class="absolute rounded border-2 text-[10px] font-semibold flex items-start justify-start px-1 py-0.5 touch-none"
+                  @pointerdown="onCalibrationBlockPointerDown(idx, $event)"
+                >
+                  B{{ idx + 1 }}
+                </button>
+              </div>
+            </div>
+            <p v-else class="text-xs text-gray-400 italic">Pilih foto lembar jawab dulu agar overlay bisa digeser langsung.</p>
+          </div>
+
           <div v-if="selectedCalibrationBlock" class="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-3">
             <p class="text-xs font-semibold text-gray-700">Atur Blok {{ selectedCalibrationBlockIndex + 1 }} · Q{{ selectedCalibrationBlock.startQ }}-{{ selectedCalibrationBlock.startQ + selectedCalibrationBlock.count - 1 }}</p>
 
@@ -735,6 +764,16 @@ const scanRotation = ref(0)
 const scanCalibration = reactive(cloneCalibration(DEFAULT_SCAN_CALIBRATION))
 const selectedCalibrationBlockIndex = ref(0)
 const calibrationStep = ref(0.01)
+const calibrationZoom = ref(1)
+const calibrationStageRef = ref(null)
+const calibrationDrag = reactive({
+  active: false,
+  index: -1,
+  startX: 0,
+  startY: 0,
+  originX: 0,
+  originY: 0,
+})
 
 // Scanner hardware
 const scannerDevices = ref([])
@@ -766,6 +805,8 @@ const selectedLessonObj = computed(() => lessons.value.find(l => Number(l.id) ==
 const selectedClassObj = computed(() => classes.value.find(k => Number(k.id) === Number(selectedClassId.value)) || null)
 const selectedTeacherObj = computed(() => teachers.value.find(t => Number(t.id) === Number(selectedTeacherId.value)) || null)
 const selectedCalibrationBlock = computed(() => scanCalibration.blocks?.[selectedCalibrationBlockIndex.value] || null)
+const calibrationImageSrc = computed(() => previewSrc.value || lastResult?.value?.debug?.sourceImage || lastResultPreview.value || lastResult?.value?.previewUrl || null)
+const calibrationStageStyle = computed(() => ({ width: `${Math.max(1, Number(calibrationZoom.value) || 1) * 100}%` }))
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
@@ -1289,6 +1330,63 @@ function applyCalibration(calibration) {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value))
+}
+
+function zoomInCalibration() {
+  calibrationZoom.value = Number(clamp((Number(calibrationZoom.value) || 1) + 0.25, 1, 3).toFixed(2))
+}
+
+function zoomOutCalibration() {
+  calibrationZoom.value = Number(clamp((Number(calibrationZoom.value) || 1) - 0.25, 1, 3).toFixed(2))
+}
+
+function calibrationBlockStyle(block, idx) {
+  const active = selectedCalibrationBlockIndex.value === idx
+  return {
+    left: `${Number(block.x || 0) * 100}%`,
+    top: `${Number(block.y || 0) * 100}%`,
+    width: `${Number(block.w || 0) * 100}%`,
+    height: `${Number(block.h || 0) * 100}%`,
+    borderColor: active ? '#0d9488' : '#f59e0b',
+    color: active ? '#0d9488' : '#b45309',
+    background: active ? 'rgba(20,184,166,0.12)' : 'rgba(245,158,11,0.12)',
+  }
+}
+
+function onCalibrationBlockPointerDown(idx, event) {
+  const block = scanCalibration.blocks?.[idx]
+  if (!block) return
+
+  selectedCalibrationBlockIndex.value = idx
+  calibrationDrag.active = true
+  calibrationDrag.index = idx
+  calibrationDrag.startX = event.clientX
+  calibrationDrag.startY = event.clientY
+  calibrationDrag.originX = Number(block.x || 0)
+  calibrationDrag.originY = Number(block.y || 0)
+  event.currentTarget?.setPointerCapture?.(event.pointerId)
+}
+
+function onCalibrationPointerMove(event) {
+  if (!calibrationDrag.active || calibrationDrag.index < 0) return
+
+  const stage = calibrationStageRef.value
+  const block = scanCalibration.blocks?.[calibrationDrag.index]
+  if (!stage || !block) return
+
+  const rect = stage.getBoundingClientRect()
+  if (!rect.width || !rect.height) return
+
+  const dx = (event.clientX - calibrationDrag.startX) / rect.width
+  const dy = (event.clientY - calibrationDrag.startY) / rect.height
+
+  block.x = Number(clamp(calibrationDrag.originX + dx, 0, 1 - Number(block.w || 0)).toFixed(4))
+  block.y = Number(clamp(calibrationDrag.originY + dy, 0, 1 - Number(block.h || 0)).toFixed(4))
+}
+
+function onCalibrationPointerUp() {
+  calibrationDrag.active = false
+  calibrationDrag.index = -1
 }
 
 function nudgeBlock(field, direction) {
