@@ -982,6 +982,8 @@
 
 <script setup>
 import { ref, onMounted, reactive, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import SvgIcon from '@/components/ui/SvgIcon.vue'
 import api from '@/api'
 import {
@@ -1003,6 +1005,8 @@ const QUESTION_LAYOUTS = [30, 35, 50]
 const selectedQuestionTotal = ref(50)
 const questionTotal = computed(() => selectedQuestionTotal.value)
 const selectedOptionChoices = ref('ABCDE')
+const router = useRouter()
+const authStore = useAuthStore()
 
 function normalizeOptionChoices(value) {
   return String(value || '').toUpperCase() === 'ABCD' ? 'ABCD' : 'ABCDE'
@@ -1546,7 +1550,16 @@ async function saveResultLink(result, source) {
   try {
     await ocrCreateResultLink(payload)
     return { ok: true }
-  } catch {
+  } catch (err) {
+    const status = err?.response?.status
+    const errCode = err?.response?.data?.error
+    if (status === 401 || (status === 400 && errCode === 'unauthorized')) {
+      // Auth failed even after interceptor refresh attempt — force re-login
+      authStore.accessToken = null
+      authStore.user = null
+      router.push({ name: 'login', query: { redirect: '/ocr', reason: 'session_expired' } })
+      return { ok: false, authError: true }
+    }
     return { ok: false }
   }
 }

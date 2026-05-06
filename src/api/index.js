@@ -45,7 +45,13 @@ api.interceptors.response.use(
     const isAuthEndpoint = AUTH_URLS.some(url => requestUrl.includes(url))
 
     // If 401 on a non-auth endpoint and we haven't retried yet, attempt silent refresh
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+    // Handle both 401 (standard) and 400 with error==="unauthorized"
+    // Some deployments/proxies convert 401 → 400 for security reasons
+    const isUnauthorized =
+      error.response?.status === 401 ||
+      (error.response?.status === 400 && error.response?.data?.error === 'unauthorized')
+
+    if (isUnauthorized && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true
 
       try {
