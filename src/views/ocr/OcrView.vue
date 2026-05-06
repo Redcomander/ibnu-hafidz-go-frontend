@@ -204,6 +204,9 @@
                 <button @click="zoomInCalibration" class="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-semibold">+</button>
               </div>
             </div>
+            <p class="text-[11px] text-gray-500">
+              Cara kalibrasi cepat: drag blok untuk geser area, titik merah untuk resize, garis teal vertikal untuk atur kolom jawaban, garis teal horizontal untuk atur baris soal, dan garis split kuning untuk atur batas nomor soal vs opsi A-E.
+            </p>
 
             <div v-if="calibrationImageSrc" class="rounded-lg border border-gray-200 bg-white overflow-auto max-h-[78vh] lg:max-h-[82vh]">
               <div ref="calibrationStageRef" class="relative" :style="calibrationStageStyle" @pointermove="onCalibrationPointerMove" @pointerup="onCalibrationPointerUp" @pointercancel="onCalibrationPointerUp">
@@ -290,6 +293,13 @@
                   <button type="button" class="resize-handle edge e" @pointerdown="onResizeHandlePointerDown(idx, 'e', $event)"></button>
                   <button type="button" class="resize-handle edge s" @pointerdown="onResizeHandlePointerDown(idx, 's', $event)"></button>
                   <button type="button" class="resize-handle edge w" @pointerdown="onResizeHandlePointerDown(idx, 'w', $event)"></button>
+
+                  <button
+                    type="button"
+                    class="guide-handle split"
+                    :style="{ left: `${getBlockSplitRatio(block) * 100}%` }"
+                    @pointerdown.stop.prevent="onGuideHandlePointerDown(idx, 'split', 0, $event)"
+                  ></button>
 
                   <button
                     v-for="guide in getColGuideRatios(block)"
@@ -668,7 +678,18 @@
                   'bg-gray-50 border-gray-200 text-gray-400'
                 ]">
                 <div class="text-[10px] text-gray-400 leading-none">{{ idx + 1 }}</div>
-                <div class="leading-tight mt-0.5">{{ ans.detected || '–' }}</div>
+                <select
+                  :value="ans.detected || ''"
+                  @change="onManualAnswerChange(lastResult, idx, $event.target.value)"
+                  class="mt-1 w-full rounded border border-gray-200 bg-white px-1 py-0.5 text-[11px] font-semibold text-gray-700"
+                >
+                  <option value="">-</option>
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="C">C</option>
+                  <option value="D">D</option>
+                  <option value="E">E</option>
+                </select>
               </div>
             </div>
           </div>
@@ -1056,7 +1077,7 @@ const calibrationResize = reactive({
 const calibrationGuideDrag = reactive({
   active: false,
   index: -1,
-  axis: null, // 'row' | 'col'
+  axis: null, // 'row' | 'col' | 'split'
   bandIndex: -1,
   startX: 0,
   startY: 0,
@@ -1146,6 +1167,10 @@ function getColGuideRatios(block) {
 function getRowGuideRatios(block) {
   const bands = getBlockRowBands(block)
   return bands.slice(1, -1).map((ratio, idx) => ({ ratio, bandIndex: idx + 1 }))
+}
+
+function getBlockSplitRatio(block) {
+  return Number(clamp(Number(block?.questionColW || scanCalibration.questionColW || 0.1), 0.03, 0.45).toFixed(4))
 }
 
 function ensureBlockGuideBands(block) {
@@ -1856,8 +1881,13 @@ function onGuideHandlePointerDown(idx, axis, bandIndex, event) {
   if (!block) return
 
   ensureBlockGuideBands(block)
-  const bands = axis === 'col' ? block.optionBands : block.rowBands
-  const startValue = Number(bands?.[bandIndex])
+  let startValue = null
+  if (axis === 'split') {
+    startValue = getBlockSplitRatio(block)
+  } else {
+    const bands = axis === 'col' ? block.optionBands : block.rowBands
+    startValue = Number(bands?.[bandIndex])
+  }
   if (!Number.isFinite(startValue)) return
 
   selectedCalibrationBlockIndex.value = idx
@@ -1883,7 +1913,17 @@ function onCalibrationGuidePointerMove(event) {
 
   const axis = calibrationGuideDrag.axis
   const bandIndex = calibrationGuideDrag.bandIndex
-  if (axis !== 'col' && axis !== 'row') return
+  if (axis !== 'col' && axis !== 'row' && axis !== 'split') return
+
+  if (axis === 'split') {
+    const deltaStage = (event.clientX - calibrationGuideDrag.startX) / rect.width
+    const blockScale = Number(block.w || 0)
+    if (!blockScale) return
+    const deltaLocal = deltaStage / blockScale
+    const rawValue = calibrationGuideDrag.startValue + deltaLocal
+    block.questionColW = Number(clamp(rawValue, 0.03, 0.45).toFixed(4))
+    return
+  }
 
   ensureBlockGuideBands(block)
   const bands = axis === 'col' ? block.optionBands : block.rowBands
@@ -1900,6 +1940,59 @@ function onCalibrationGuidePointerMove(event) {
   const min = Number(bands[bandIndex - 1]) + minGap
   const max = Number(bands[bandIndex + 1]) - minGap
   bands[bandIndex] = Number(clamp(rawValue, min, max).toFixed(4))
+}
+
+function onManualAnswerChange(result, answerIndex, value) {
+  if (!result || !Array.isArray(result.answers) || !result.answers[answerIndex]) return
+
+  const normalized = String(value || '').toUpperCase()
+  const detected = /^[ABCDE]$/.test(normalized) ? normalized : null
+  result.answers[answerIndex].detected = detected
+
+  const parsedAnswers = {}
+  result.answers.forEach((item, idx) => {
+    if (item?.detected) {
+      parsedAnswers[String(idx + 1)] = item.detected
+    }
+  })
+  result.parsedAnswers = parsedAnswers
+
+  let hasExpected = false
+  let correct = 0
+  let wrong = 0
+  let blank = 0
+  let total = 0
+
+  result.answers.forEach((item) => {
+    const expected = String(item?.expected || '').toUpperCase()
+    const actual = String(item?.detected || '').toUpperCase()
+
+    if (expected) {
+      hasExpected = true
+      total += 1
+      if (!actual) {
+        blank += 1
+        item.correct = false
+      } else if (actual === expected) {
+        correct += 1
+        item.correct = true
+      } else {
+        wrong += 1
+        item.correct = false
+      }
+      return
+    }
+
+    item.correct = null
+    if (!actual) blank += 1
+  })
+
+  if (hasExpected && total > 0) {
+    result.correct = correct
+    result.wrong = wrong
+    result.blank = Math.max(0, blank)
+    result.score = Number(((correct / total) * 100).toFixed(2))
+  }
 }
 
 function onResizeHandlePointerDown(idx, handle, event) {
@@ -2281,5 +2374,24 @@ const savedResultGroups = computed(() => {
   height: 2px;
   transform: translateY(-50%);
   background: rgba(20, 184, 166, 0.9);
+}
+
+.guide-handle.split {
+  top: 0;
+  bottom: 0;
+  width: 16px;
+  transform: translateX(-50%);
+  cursor: ew-resize;
+}
+
+.guide-handle.split::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  transform: translateX(-50%);
+  background: rgba(245, 158, 11, 0.95);
 }
 </style>
