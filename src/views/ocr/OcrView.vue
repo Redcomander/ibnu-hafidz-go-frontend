@@ -175,12 +175,94 @@
               <div ref="calibrationStageRef" class="relative" :style="calibrationStageStyle" @pointermove="onCalibrationPointerMove" @pointerup="onCalibrationPointerUp" @pointercancel="onCalibrationPointerUp">
                 <img :src="calibrationImageSrc" alt="Calibration" class="block w-full h-auto select-none" draggable="false" />
 
+                <!-- Grid Overlay SVG -->
+                <svg v-if="calibrationImageSrc" class="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
+                  <!-- Grid lines (vertical and horizontal) -->
+                  <g stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,4" opacity="0.5">
+                    <!-- Vertical lines for 3 columns -->
+                    <line v-for="i in [1, 2]" :key="`vline-${i}`" :x1="`${(i / 3) * 100}%`" y1="0" :x2="`${(i / 3) * 100}%`" y2="100%" />
+                    <!-- Horizontal line between rows -->
+                    <line x1="0" y1="50%" x2="100%" y2="50%" />
+                  </g>
+
+                  <!-- Block overlays with grid and labels -->
+                  <g v-for="(block, idx) in scanCalibration.blocks" :key="`grid-${idx}`">
+                    <!-- Block border -->
+                    <rect
+                      :x="`${Number(block.x || 0) * 100}%`"
+                      :y="`${Number(block.y || 0) * 100}%`"
+                      :width="`${Number(block.w || 0) * 100}%`"
+                      :height="`${Number(block.h || 0) * 100}%`"
+                      :fill="selectedCalibrationBlockIndex === idx ? 'rgba(20,184,166,0.08)' : 'rgba(245,158,11,0.05)'"
+                      :stroke="selectedCalibrationBlockIndex === idx ? '#0d9488' : '#f59e0b'"
+                      stroke-width="2"
+                      pointer-events="none"
+                    />
+
+                    <!-- Row label -->
+                    <text
+                      :x="`${(Number(block.x || 0) + 0.02) * 100}%`"
+                      :y="`${(Number(block.y || 0) + 0.03) * 100}%`"
+                      font-size="10"
+                      font-weight="bold"
+                      :fill="selectedCalibrationBlockIndex === idx ? '#0d9488' : '#f59e0b'"
+                      pointer-events="none"
+                    >
+                      Q{{ block.startQ }}-{{ block.startQ + block.count - 1 }}
+                    </text>
+
+                    <!-- Resize handles (8 points: 4 corners + 4 edges) -->
+                    <g class="resize-handles" v-if="selectedCalibrationBlockIndex === idx">
+                      <!-- Top-left -->
+                      <circle :cx="`${Number(block.x || 0) * 100}%`" :cy="`${Number(block.y || 0) * 100}%`"
+                        r="4" fill="#ef4444" class="cursor-nwse-resize hover-handle"
+                        @pointerdown="onResizeHandlePointerDown(idx, 'nw', $event)" />
+
+                      <!-- Top-center -->
+                      <circle :cx="`${(Number(block.x || 0) + Number(block.w || 0) / 2) * 100}%`" :cy="`${Number(block.y || 0) * 100}%`"
+                        r="4" fill="#f97316" class="cursor-ns-resize hover-handle"
+                        @pointerdown="onResizeHandlePointerDown(idx, 'n', $event)" />
+
+                      <!-- Top-right -->
+                      <circle :cx="`${(Number(block.x || 0) + Number(block.w || 0)) * 100}%`" :cy="`${Number(block.y || 0) * 100}%`"
+                        r="4" fill="#ef4444" class="cursor-nesw-resize hover-handle"
+                        @pointerdown="onResizeHandlePointerDown(idx, 'ne', $event)" />
+
+                      <!-- Middle-left -->
+                      <circle :cx="`${Number(block.x || 0) * 100}%`" :cy="`${(Number(block.y || 0) + Number(block.h || 0) / 2) * 100}%`"
+                        r="4" fill="#f97316" class="cursor-ew-resize hover-handle"
+                        @pointerdown="onResizeHandlePointerDown(idx, 'w', $event)" />
+
+                      <!-- Middle-right -->
+                      <circle :cx="`${(Number(block.x || 0) + Number(block.w || 0)) * 100}%`" :cy="`${(Number(block.y || 0) + Number(block.h || 0) / 2) * 100}%`"
+                        r="4" fill="#f97316" class="cursor-ew-resize hover-handle"
+                        @pointerdown="onResizeHandlePointerDown(idx, 'e', $event)" />
+
+                      <!-- Bottom-left -->
+                      <circle :cx="`${Number(block.x || 0) * 100}%`" :cy="`${(Number(block.y || 0) + Number(block.h || 0)) * 100}%`"
+                        r="4" fill="#ef4444" class="cursor-nesw-resize hover-handle"
+                        @pointerdown="onResizeHandlePointerDown(idx, 'sw', $event)" />
+
+                      <!-- Bottom-center -->
+                      <circle :cx="`${(Number(block.x || 0) + Number(block.w || 0) / 2) * 100}%`" :cy="`${(Number(block.y || 0) + Number(block.h || 0)) * 100}%`"
+                        r="4" fill="#f97316" class="cursor-ns-resize hover-handle"
+                        @pointerdown="onResizeHandlePointerDown(idx, 's', $event)" />
+
+                      <!-- Bottom-right -->
+                      <circle :cx="`${(Number(block.x || 0) + Number(block.w || 0)) * 100}%`" :cy="`${(Number(block.y || 0) + Number(block.h || 0)) * 100}%`"
+                        r="4" fill="#ef4444" class="cursor-se-resize hover-handle"
+                        @pointerdown="onResizeHandlePointerDown(idx, 'se', $event)" />
+                    </g>
+                  </g>
+                </svg>
+
+                <!-- Block buttons (for selection and drag) -->
                 <button
                   v-for="(block, idx) in scanCalibration.blocks"
                   :key="`overlay-${idx}`"
                   type="button"
                   :style="calibrationBlockStyle(block, idx)"
-                  class="absolute rounded border-2 text-[10px] font-semibold flex items-start justify-start px-1 py-0.5 touch-none"
+                  class="absolute rounded border-2 text-[10px] font-semibold flex items-start justify-start px-1 py-0.5 touch-none pointer-events-auto"
                   @pointerdown="onCalibrationBlockPointerDown(idx, $event)"
                 >
                   B{{ idx + 1 }}
@@ -773,6 +855,18 @@ const calibrationDrag = reactive({
   startY: 0,
   originX: 0,
   originY: 0,
+})
+
+const calibrationResize = reactive({
+  active: false,
+  index: -1,
+  handle: null, // 'nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se'
+  startX: 0,
+  startY: 0,
+  originX: 0,
+  originY: 0,
+  originW: 0,
+  originH: 0,
 })
 
 // Scanner hardware
@@ -1368,6 +1462,9 @@ function onCalibrationBlockPointerDown(idx, event) {
 }
 
 function onCalibrationPointerMove(event) {
+  if (calibrationResize.active && calibrationResize.index >= 0) {
+    return onCalibrationResizePointerMove(event)
+  }
   if (!calibrationDrag.active || calibrationDrag.index < 0) return
 
   const stage = calibrationStageRef.value
@@ -1387,6 +1484,73 @@ function onCalibrationPointerMove(event) {
 function onCalibrationPointerUp() {
   calibrationDrag.active = false
   calibrationDrag.index = -1
+  calibrationResize.active = false
+  calibrationResize.index = -1
+}
+
+function onResizeHandlePointerDown(idx, handle, event) {
+  const block = scanCalibration.blocks?.[idx]
+  if (!block) return
+
+  selectedCalibrationBlockIndex.value = idx
+  calibrationResize.active = true
+  calibrationResize.index = idx
+  calibrationResize.handle = handle
+  calibrationResize.startX = event.clientX
+  calibrationResize.startY = event.clientY
+  calibrationResize.originX = Number(block.x || 0)
+  calibrationResize.originY = Number(block.y || 0)
+  calibrationResize.originW = Number(block.w || 0)
+  calibrationResize.originH = Number(block.h || 0)
+  event.currentTarget?.setPointerCapture?.(event.pointerId)
+  event.stopPropagation()
+}
+
+function onCalibrationResizePointerMove(event) {
+  if (!calibrationResize.active || calibrationResize.index < 0) return
+
+  const stage = calibrationStageRef.value
+  const block = scanCalibration.blocks?.[calibrationResize.index]
+  if (!stage || !block) return
+
+  const rect = stage.getBoundingClientRect()
+  if (!rect.width || !rect.height) return
+
+  const dx = (event.clientX - calibrationResize.startX) / rect.width
+  const dy = (event.clientY - calibrationResize.startY) / rect.height
+  const handle = calibrationResize.handle
+
+  // Calculate new dimensions based on which handle is being dragged
+  let newX = calibrationResize.originX
+  let newY = calibrationResize.originY
+  let newW = calibrationResize.originW
+  let newH = calibrationResize.originH
+
+  if (handle.includes('w')) {
+    // Left edge
+    const delta = clamp(calibrationResize.originX + dx, 0, calibrationResize.originX + calibrationResize.originW - 0.01)
+    newW = calibrationResize.originW - (delta - calibrationResize.originX)
+    newX = delta
+  }
+  if (handle.includes('e')) {
+    // Right edge
+    newW = clamp(calibrationResize.originW + dx, 0.01, 1 - calibrationResize.originX)
+  }
+  if (handle.includes('n')) {
+    // Top edge
+    const delta = clamp(calibrationResize.originY + dy, 0, calibrationResize.originY + calibrationResize.originH - 0.01)
+    newH = calibrationResize.originH - (delta - calibrationResize.originY)
+    newY = delta
+  }
+  if (handle.includes('s')) {
+    // Bottom edge
+    newH = clamp(calibrationResize.originH + dy, 0.01, 1 - calibrationResize.originY)
+  }
+
+  block.x = Number(newX.toFixed(4))
+  block.y = Number(newY.toFixed(4))
+  block.w = Number(newW.toFixed(4))
+  block.h = Number(newH.toFixed(4))
 }
 
 function nudgeBlock(field, direction) {
@@ -1531,5 +1695,36 @@ const savedResultGroups = computed(() => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* Resize handle styles */
+.resize-handles circle {
+  cursor: pointer;
+  transition: r 0.2s ease, filter 0.2s ease;
+}
+
+.resize-handles circle:hover {
+  r: 6;
+  filter: drop-shadow(0 0 3px rgba(0,0,0,0.3));
+}
+
+.cursor-nwse-resize {
+  cursor: nwse-resize;
+}
+
+.cursor-nesw-resize {
+  cursor: nesw-resize;
+}
+
+.cursor-ns-resize {
+  cursor: ns-resize;
+}
+
+.cursor-ew-resize {
+  cursor: ew-resize;
+}
+
+.cursor-se-resize {
+  cursor: se-resize;
 }
 </style>
