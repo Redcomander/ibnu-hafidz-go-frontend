@@ -229,19 +229,19 @@
 
                     <g stroke="#475569" stroke-width="1.25" opacity="0.95">
                       <line
-                        v-for="r in Math.max(0, Number(block.count || 0) - 1)"
-                        :key="`block-row-${idx}-${r}`"
+                        v-for="guide in getRowGuideRatios(block)"
+                        :key="`block-row-${idx}-${guide.bandIndex}`"
                         :x1="`${Number(block.x || 0) * 100}%`"
-                        :y1="`${(Number(block.y || 0) + (Number(block.h || 0) * r / Number(block.count || 1))) * 100}%`"
+                        :y1="`${(Number(block.y || 0) + (Number(block.h || 0) * guide.ratio)) * 100}%`"
                         :x2="`${(Number(block.x || 0) + Number(block.w || 0)) * 100}%`"
-                        :y2="`${(Number(block.y || 0) + (Number(block.h || 0) * r / Number(block.count || 1))) * 100}%`"
+                        :y2="`${(Number(block.y || 0) + (Number(block.h || 0) * guide.ratio)) * 100}%`"
                       />
                       <line
-                        v-for="c in calibrationBlockCols - 1"
-                        :key="`block-col-${idx}-${c}`"
-                        :x1="`${(Number(block.x || 0) + (Number(block.w || 0) * c / calibrationBlockCols)) * 100}%`"
+                        v-for="guide in getColGuideRatios(block)"
+                        :key="`block-col-${idx}-${guide.bandIndex}`"
+                        :x1="`${(Number(block.x || 0) + (Number(block.w || 0) * guide.ratio)) * 100}%`"
                         :y1="`${Number(block.y || 0) * 100}%`"
-                        :x2="`${(Number(block.x || 0) + (Number(block.w || 0) * c / calibrationBlockCols)) * 100}%`"
+                        :x2="`${(Number(block.x || 0) + (Number(block.w || 0) * guide.ratio)) * 100}%`"
                         :y2="`${(Number(block.y || 0) + Number(block.h || 0)) * 100}%`"
                       />
                     </g>
@@ -290,6 +290,24 @@
                   <button type="button" class="resize-handle edge e" @pointerdown="onResizeHandlePointerDown(idx, 'e', $event)"></button>
                   <button type="button" class="resize-handle edge s" @pointerdown="onResizeHandlePointerDown(idx, 's', $event)"></button>
                   <button type="button" class="resize-handle edge w" @pointerdown="onResizeHandlePointerDown(idx, 'w', $event)"></button>
+
+                  <button
+                    v-for="guide in getColGuideRatios(block)"
+                    :key="`col-guide-handle-${idx}-${guide.bandIndex}`"
+                    type="button"
+                    class="guide-handle col"
+                    :style="{ left: `${guide.ratio * 100}%` }"
+                    @pointerdown.stop.prevent="onGuideHandlePointerDown(idx, 'col', guide.bandIndex, $event)"
+                  ></button>
+
+                  <button
+                    v-for="guide in getRowGuideRatios(block)"
+                    :key="`row-guide-handle-${idx}-${guide.bandIndex}`"
+                    type="button"
+                    class="guide-handle row"
+                    :style="{ top: `${guide.ratio * 100}%` }"
+                    @pointerdown.stop.prevent="onGuideHandlePointerDown(idx, 'row', guide.bandIndex, $event)"
+                  ></button>
                 </div>
               </div>
             </div>
@@ -1035,6 +1053,16 @@ const calibrationResize = reactive({
   originH: 0,
 })
 
+const calibrationGuideDrag = reactive({
+  active: false,
+  index: -1,
+  axis: null, // 'row' | 'col'
+  bandIndex: -1,
+  startX: 0,
+  startY: 0,
+  startValue: 0,
+})
+
 // Scanner hardware
 const scannerDevices = ref([])
 const selectedScannerId = ref(null)
@@ -1070,6 +1098,61 @@ const calibrationStageStyle = computed(() => ({ width: `${Math.max(1, Number(cal
 const calibrationGlobalCols = 12
 const calibrationGlobalRows = 12
 const calibrationBlockCols = 5
+
+function buildUniformBands(segmentCount) {
+  const safeCount = Math.max(1, Number(segmentCount) || 1)
+  return Array.from({ length: safeCount + 1 }, (_, idx) => Number((idx / safeCount).toFixed(4)))
+}
+
+function sanitizeGuideBands(inputBands, segmentCount, minGap = 0.02) {
+  const safeCount = Math.max(1, Number(segmentCount) || 1)
+  const fallback = buildUniformBands(safeCount)
+
+  if (!Array.isArray(inputBands) || inputBands.length !== safeCount + 1) {
+    return fallback
+  }
+
+  const parsed = inputBands.map((value) => Number(value))
+  if (parsed.some((value) => !Number.isFinite(value))) {
+    return fallback
+  }
+
+  const out = new Array(safeCount + 1)
+  out[0] = 0
+  out[safeCount] = 1
+
+  for (let idx = 1; idx < safeCount; idx += 1) {
+    const min = out[idx - 1] + minGap
+    const max = 1 - (safeCount - idx) * minGap
+    out[idx] = Math.min(max, Math.max(min, parsed[idx]))
+  }
+
+  return out.map((value) => Number(value.toFixed(4)))
+}
+
+function getBlockOptionBands(block) {
+  return sanitizeGuideBands(block?.optionBands, calibrationBlockCols, 0.04)
+}
+
+function getBlockRowBands(block) {
+  return sanitizeGuideBands(block?.rowBands, Number(block?.count || 1), 0.02)
+}
+
+function getColGuideRatios(block) {
+  const bands = getBlockOptionBands(block)
+  return bands.slice(1, -1).map((ratio, idx) => ({ ratio, bandIndex: idx + 1 }))
+}
+
+function getRowGuideRatios(block) {
+  const bands = getBlockRowBands(block)
+  return bands.slice(1, -1).map((ratio, idx) => ({ ratio, bandIndex: idx + 1 }))
+}
+
+function ensureBlockGuideBands(block) {
+  if (!block || typeof block !== 'object') return
+  block.optionBands = getBlockOptionBands(block)
+  block.rowBands = getBlockRowBands(block)
+}
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
@@ -1595,9 +1678,13 @@ function applyCalibration(calibration) {
   const incomingBlocks = Array.isArray(incoming.blocks) ? incoming.blocks : []
   scanCalibration.blocks = base.blocks.map((block, idx) => {
     const src = incomingBlocks[idx] || {}
+    const safeCount = Number.isFinite(Number(src.count)) ? Number(src.count) : Number(block.count || 1)
     return {
       ...block,
       ...src,
+      count: safeCount,
+      optionBands: sanitizeGuideBands(src.optionBands ?? block.optionBands, calibrationBlockCols, 0.04),
+      rowBands: sanitizeGuideBands(src.rowBands ?? block.rowBands, safeCount, 0.02),
     }
   })
 }
@@ -1731,6 +1818,9 @@ function onCalibrationBlockPointerDown(idx, event) {
 }
 
 function onCalibrationPointerMove(event) {
+  if (calibrationGuideDrag.active && calibrationGuideDrag.index >= 0) {
+    return onCalibrationGuidePointerMove(event)
+  }
   if (calibrationResize.active && calibrationResize.index >= 0) {
     return onCalibrationResizePointerMove(event)
   }
@@ -1755,6 +1845,61 @@ function onCalibrationPointerUp() {
   calibrationDrag.index = -1
   calibrationResize.active = false
   calibrationResize.index = -1
+  calibrationGuideDrag.active = false
+  calibrationGuideDrag.index = -1
+  calibrationGuideDrag.axis = null
+  calibrationGuideDrag.bandIndex = -1
+}
+
+function onGuideHandlePointerDown(idx, axis, bandIndex, event) {
+  const block = scanCalibration.blocks?.[idx]
+  if (!block) return
+
+  ensureBlockGuideBands(block)
+  const bands = axis === 'col' ? block.optionBands : block.rowBands
+  const startValue = Number(bands?.[bandIndex])
+  if (!Number.isFinite(startValue)) return
+
+  selectedCalibrationBlockIndex.value = idx
+  calibrationGuideDrag.active = true
+  calibrationGuideDrag.index = idx
+  calibrationGuideDrag.axis = axis
+  calibrationGuideDrag.bandIndex = bandIndex
+  calibrationGuideDrag.startX = event.clientX
+  calibrationGuideDrag.startY = event.clientY
+  calibrationGuideDrag.startValue = startValue
+  event.currentTarget?.setPointerCapture?.(event.pointerId)
+}
+
+function onCalibrationGuidePointerMove(event) {
+  if (!calibrationGuideDrag.active || calibrationGuideDrag.index < 0) return
+
+  const stage = calibrationStageRef.value
+  const block = scanCalibration.blocks?.[calibrationGuideDrag.index]
+  if (!stage || !block) return
+
+  const rect = stage.getBoundingClientRect()
+  if (!rect.width || !rect.height) return
+
+  const axis = calibrationGuideDrag.axis
+  const bandIndex = calibrationGuideDrag.bandIndex
+  if (axis !== 'col' && axis !== 'row') return
+
+  ensureBlockGuideBands(block)
+  const bands = axis === 'col' ? block.optionBands : block.rowBands
+  const blockScale = axis === 'col' ? Number(block.w || 0) : Number(block.h || 0)
+  if (!blockScale) return
+
+  const deltaStage = axis === 'col'
+    ? (event.clientX - calibrationGuideDrag.startX) / rect.width
+    : (event.clientY - calibrationGuideDrag.startY) / rect.height
+
+  const deltaLocal = deltaStage / blockScale
+  const rawValue = calibrationGuideDrag.startValue + deltaLocal
+  const minGap = axis === 'col' ? 0.04 : 0.02
+  const min = Number(bands[bandIndex - 1]) + minGap
+  const max = Number(bands[bandIndex + 1]) - minGap
+  bands[bandIndex] = Number(clamp(rawValue, min, max).toFixed(4))
 }
 
 function onResizeHandlePointerDown(idx, handle, event) {
@@ -2090,5 +2235,51 @@ const savedResultGroups = computed(() => {
   right: 0;
   bottom: 0;
   cursor: nwse-resize;
+}
+
+.guide-handle {
+  position: absolute;
+  border: none;
+  padding: 0;
+  background: transparent;
+  touch-action: none;
+}
+
+.guide-handle.col {
+  top: 0;
+  bottom: 0;
+  width: 16px;
+  transform: translateX(-50%);
+  cursor: ew-resize;
+}
+
+.guide-handle.col::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+  background: rgba(20, 184, 166, 0.9);
+}
+
+.guide-handle.row {
+  left: 0;
+  right: 0;
+  height: 16px;
+  transform: translateY(-50%);
+  cursor: ns-resize;
+}
+
+.guide-handle.row::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  transform: translateY(-50%);
+  background: rgba(20, 184, 166, 0.9);
 }
 </style>
