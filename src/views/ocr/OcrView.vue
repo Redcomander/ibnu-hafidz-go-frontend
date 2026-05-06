@@ -188,21 +188,24 @@
 
           <div class="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2">
             <div class="flex items-center justify-between gap-2">
-              <p class="text-xs font-semibold text-gray-700">Drag & Drop Overlay</p>
-              <div class="flex items-center gap-1.5">
+              <p class="text-xs font-semibold text-gray-700">Preview Kalibrasi Besar</p>
+              <div class="flex items-center gap-1.5 flex-wrap justify-end">
+                <button @click="setCalibrationZoom(1)" class="rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-semibold">100%</button>
+                <button @click="setCalibrationZoom(1.5)" class="rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-semibold">150%</button>
+                <button @click="setCalibrationZoom(2)" class="rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-semibold">200%</button>
                 <button @click="zoomOutCalibration" class="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-semibold">-</button>
                 <span class="text-xs text-gray-500 min-w-[3.2rem] text-center">{{ Math.round(calibrationZoom * 100) }}%</span>
                 <button @click="zoomInCalibration" class="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-semibold">+</button>
               </div>
             </div>
 
-            <div v-if="calibrationImageSrc" class="rounded-lg border border-gray-200 bg-white overflow-auto max-h-[60vh]">
+            <div v-if="calibrationImageSrc" class="rounded-lg border border-gray-200 bg-white overflow-auto max-h-[78vh] lg:max-h-[82vh]">
               <div ref="calibrationStageRef" class="relative" :style="calibrationStageStyle" @pointermove="onCalibrationPointerMove" @pointerup="onCalibrationPointerUp" @pointercancel="onCalibrationPointerUp">
                 <img :src="calibrationImageSrc" alt="Calibration" class="block w-full h-auto select-none" draggable="false" />
 
                 <!-- Grid Overlay SVG -->
                 <svg v-if="calibrationImageSrc" class="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
-                  <g stroke="#d1d5db" stroke-width="0.8" opacity="0.7">
+                  <g stroke="#94a3b8" stroke-width="1.35" opacity="0.95">
                     <line v-for="i in calibrationGlobalCols - 1" :key="`gv-${i}`" :x1="`${(i / calibrationGlobalCols) * 100}%`" y1="0" :x2="`${(i / calibrationGlobalCols) * 100}%`" y2="100%" />
                     <line v-for="i in calibrationGlobalRows - 1" :key="`gh-${i}`" x1="0" :y1="`${(i / calibrationGlobalRows) * 100}%`" x2="100%" :y2="`${(i / calibrationGlobalRows) * 100}%`" />
                   </g>
@@ -215,10 +218,10 @@
                       :height="`${Number(block.h || 0) * 100}%`"
                       :fill="selectedCalibrationBlockIndex === idx ? 'rgba(20,184,166,0.06)' : 'rgba(245,158,11,0.04)'"
                       :stroke="selectedCalibrationBlockIndex === idx ? '#0d9488' : '#f59e0b'"
-                      stroke-width="1.8"
+                      stroke-width="2.4"
                     />
 
-                    <g stroke="#9ca3af" stroke-width="0.7" opacity="0.8">
+                    <g stroke="#475569" stroke-width="1.25" opacity="0.95">
                       <line
                         v-for="r in Math.max(0, Number(block.count || 0) - 1)"
                         :key="`block-row-${idx}-${r}`"
@@ -290,33 +293,55 @@
           <div v-if="selectedCalibrationBlock" class="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-3">
             <p class="text-xs font-semibold text-gray-700">Atur Blok {{ selectedCalibrationBlockIndex + 1 }} · Q{{ selectedCalibrationBlock.startQ }}-{{ selectedCalibrationBlock.startQ + selectedCalibrationBlock.count - 1 }}</p>
 
-            <div class="rounded-lg border border-gray-200 bg-white p-2.5 space-y-2">
-              <p class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Manual Kolom & Baris</p>
-
-              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                <button @click="nudgeBlock('questionColW', -1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">ColW-</button>
-                <button @click="nudgeGlobalCalibration('centerPadX', -1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">PadX-</button>
-                <button @click="nudgeGlobalCalibration('centerPadY', -1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">PadY-</button>
-                <button @click="nudgeBlock('questionColW', 1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">ColW+</button>
-                <button @click="nudgeGlobalCalibration('centerPadX', 1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">PadX+</button>
-                <button @click="nudgeGlobalCalibration('centerPadY', 1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">PadY+</button>
-              </div>
-
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <div class="rounded-lg border border-gray-200 bg-white p-2.5 space-y-2">
+                <p class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Kolom</p>
+                <div class="grid grid-cols-2 gap-2">
+                  <button @click="nudgeBlock('questionColW', -1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">ColW-</button>
+                  <button @click="nudgeBlock('questionColW', 1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">ColW+</button>
+                </div>
                 <div>
-                  <label class="text-[10px] text-gray-400">block.questionColW</label>
+                  <label class="text-[10px] text-gray-400">Lebar kolom blok aktif</label>
                   <input v-model.number="selectedCalibrationBlock.questionColW" type="number" step="0.005" min="0.02" max="0.3" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
                 </div>
                 <div>
-                  <label class="text-[10px] text-gray-400">global.questionColW</label>
+                  <label class="text-[10px] text-gray-400">Lebar kolom global</label>
                   <input v-model.number="scanCalibration.questionColW" type="number" step="0.005" min="0.02" max="0.3" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
                 </div>
+              </div>
+
+              <div class="rounded-lg border border-gray-200 bg-white p-2.5 space-y-2">
+                <p class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Baris</p>
+                <div class="grid grid-cols-2 gap-2">
+                  <button @click="nudgeBlock('rowTop', -1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">Top-</button>
+                  <button @click="nudgeBlock('rowTop', 1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">Top+</button>
+                  <button @click="nudgeBlock('rowBottom', -1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">Bottom-</button>
+                  <button @click="nudgeBlock('rowBottom', 1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">Bottom+</button>
+                </div>
                 <div>
-                  <label class="text-[10px] text-gray-400">centerPadX</label>
+                  <label class="text-[10px] text-gray-400">Baris atas</label>
+                  <input v-model.number="selectedCalibrationBlock.rowTop" type="number" step="0.005" min="0" max="0.9" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+                </div>
+                <div>
+                  <label class="text-[10px] text-gray-400">Baris bawah</label>
+                  <input v-model.number="selectedCalibrationBlock.rowBottom" type="number" step="0.005" min="0.1" max="1" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+                </div>
+              </div>
+
+              <div class="rounded-lg border border-gray-200 bg-white p-2.5 space-y-2">
+                <p class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Gap</p>
+                <div class="grid grid-cols-2 gap-2">
+                  <button @click="nudgeGlobalCalibration('centerPadX', -1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">GapX-</button>
+                  <button @click="nudgeGlobalCalibration('centerPadX', 1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">GapX+</button>
+                  <button @click="nudgeGlobalCalibration('centerPadY', -1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">GapY-</button>
+                  <button @click="nudgeGlobalCalibration('centerPadY', 1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">GapY+</button>
+                </div>
+                <div>
+                  <label class="text-[10px] text-gray-400">Gap horizontal</label>
                   <input v-model.number="scanCalibration.centerPadX" type="number" step="0.005" min="0" max="0.5" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
                 </div>
                 <div>
-                  <label class="text-[10px] text-gray-400">centerPadY</label>
+                  <label class="text-[10px] text-gray-400">Gap vertikal</label>
                   <input v-model.number="scanCalibration.centerPadY" type="number" step="0.005" min="0" max="0.5" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
                 </div>
               </div>
@@ -864,8 +889,8 @@ const DEFAULT_SCAN_CALIBRATION = {
     { startQ: 1, count: 10, x: 0.12, y: 0.37, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
     { startQ: 11, count: 10, x: 0.43, y: 0.37, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
     { startQ: 21, count: 10, x: 0.73, y: 0.37, w: 0.23, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
-    { startQ: 31, count: 10, x: 0.12, y: 0.68, w: 0.27, h: 0.19, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
-    { startQ: 41, count: 10, x: 0.43, y: 0.68, w: 0.27, h: 0.19, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+    { startQ: 31, count: 10, x: 0.12, y: 0.64, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+    { startQ: 41, count: 10, x: 0.43, y: 0.64, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
   ],
 }
 
@@ -893,7 +918,7 @@ const scanRotation = ref(0)
 const scanCalibration = reactive(cloneCalibration(DEFAULT_SCAN_CALIBRATION))
 const selectedCalibrationBlockIndex = ref(0)
 const calibrationStep = ref(0.01)
-const calibrationZoom = ref(1)
+const calibrationZoom = ref(1.25)
 const calibrationStageRef = ref(null)
 const calibrationDrag = reactive({
   active: false,
@@ -947,7 +972,7 @@ const selectedClassObj = computed(() => classes.value.find(k => Number(k.id) ===
 const selectedTeacherObj = computed(() => teachers.value.find(t => Number(t.id) === Number(selectedTeacherId.value)) || null)
 const selectedCalibrationBlock = computed(() => scanCalibration.blocks?.[selectedCalibrationBlockIndex.value] || null)
 const calibrationImageSrc = computed(() => previewSrc.value || lastResult?.value?.debug?.sourceImage || lastResultPreview.value || lastResult?.value?.previewUrl || null)
-const calibrationStageStyle = computed(() => ({ width: `${Math.max(1, Number(calibrationZoom.value) || 1) * 100}%` }))
+const calibrationStageStyle = computed(() => ({ width: `${Math.max(1, Number(calibrationZoom.value) || 1) * 100}%`, minWidth: '100%' }))
 const calibrationGlobalCols = 12
 const calibrationGlobalRows = 12
 const calibrationBlockCols = 5
@@ -1477,11 +1502,15 @@ function clamp(value, min, max) {
 }
 
 function zoomInCalibration() {
-  calibrationZoom.value = Number(clamp((Number(calibrationZoom.value) || 1) + 0.25, 1, 3).toFixed(2))
+  calibrationZoom.value = Number(clamp((Number(calibrationZoom.value) || 1) + 0.25, 1, 5).toFixed(2))
 }
 
 function zoomOutCalibration() {
-  calibrationZoom.value = Number(clamp((Number(calibrationZoom.value) || 1) - 0.25, 1, 3).toFixed(2))
+  calibrationZoom.value = Number(clamp((Number(calibrationZoom.value) || 1) - 0.25, 1, 5).toFixed(2))
+}
+
+function setCalibrationZoom(value) {
+  calibrationZoom.value = Number(clamp(Number(value) || 1, 1, 5).toFixed(2))
 }
 
 function calibrationBlockStyle(block, idx) {
