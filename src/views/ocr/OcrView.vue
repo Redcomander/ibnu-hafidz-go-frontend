@@ -177,96 +177,86 @@
 
                 <!-- Grid Overlay SVG -->
                 <svg v-if="calibrationImageSrc" class="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
-                  <!-- Grid lines (vertical and horizontal) -->
-                  <g stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,4" opacity="0.5">
-                    <!-- Vertical lines for 3 columns -->
-                    <line v-for="i in [1, 2]" :key="`vline-${i}`" :x1="`${(i / 3) * 100}%`" y1="0" :x2="`${(i / 3) * 100}%`" y2="100%" />
-                    <!-- Horizontal line between rows -->
-                    <line x1="0" y1="50%" x2="100%" y2="50%" />
+                  <g stroke="#d1d5db" stroke-width="0.8" opacity="0.7">
+                    <line v-for="i in calibrationGlobalCols - 1" :key="`gv-${i}`" :x1="`${(i / calibrationGlobalCols) * 100}%`" y1="0" :x2="`${(i / calibrationGlobalCols) * 100}%`" y2="100%" />
+                    <line v-for="i in calibrationGlobalRows - 1" :key="`gh-${i}`" x1="0" :y1="`${(i / calibrationGlobalRows) * 100}%`" x2="100%" :y2="`${(i / calibrationGlobalRows) * 100}%`" />
                   </g>
 
-                  <!-- Block overlays with grid and labels -->
                   <g v-for="(block, idx) in scanCalibration.blocks" :key="`grid-${idx}`">
-                    <!-- Block border -->
                     <rect
                       :x="`${Number(block.x || 0) * 100}%`"
                       :y="`${Number(block.y || 0) * 100}%`"
                       :width="`${Number(block.w || 0) * 100}%`"
                       :height="`${Number(block.h || 0) * 100}%`"
-                      :fill="selectedCalibrationBlockIndex === idx ? 'rgba(20,184,166,0.08)' : 'rgba(245,158,11,0.05)'"
+                      :fill="selectedCalibrationBlockIndex === idx ? 'rgba(20,184,166,0.06)' : 'rgba(245,158,11,0.04)'"
                       :stroke="selectedCalibrationBlockIndex === idx ? '#0d9488' : '#f59e0b'"
-                      stroke-width="2"
-                      pointer-events="none"
+                      stroke-width="1.8"
                     />
 
-                    <!-- Row label -->
+                    <g stroke="#9ca3af" stroke-width="0.7" opacity="0.8">
+                      <line
+                        v-for="r in Math.max(0, Number(block.count || 0) - 1)"
+                        :key="`block-row-${idx}-${r}`"
+                        :x1="`${Number(block.x || 0) * 100}%`"
+                        :y1="`${(Number(block.y || 0) + (Number(block.h || 0) * r / Number(block.count || 1))) * 100}%`"
+                        :x2="`${(Number(block.x || 0) + Number(block.w || 0)) * 100}%`"
+                        :y2="`${(Number(block.y || 0) + (Number(block.h || 0) * r / Number(block.count || 1))) * 100}%`"
+                      />
+                      <line
+                        v-for="c in calibrationBlockCols - 1"
+                        :key="`block-col-${idx}-${c}`"
+                        :x1="`${(Number(block.x || 0) + (Number(block.w || 0) * c / calibrationBlockCols)) * 100}%`"
+                        :y1="`${Number(block.y || 0) * 100}%`"
+                        :x2="`${(Number(block.x || 0) + (Number(block.w || 0) * c / calibrationBlockCols)) * 100}%`"
+                        :y2="`${(Number(block.y || 0) + Number(block.h || 0)) * 100}%`"
+                      />
+                    </g>
+
                     <text
-                      :x="`${(Number(block.x || 0) + 0.02) * 100}%`"
-                      :y="`${(Number(block.y || 0) + 0.03) * 100}%`"
-                      font-size="10"
-                      font-weight="bold"
-                      :fill="selectedCalibrationBlockIndex === idx ? '#0d9488' : '#f59e0b'"
-                      pointer-events="none"
+                      :x="`${(Number(block.x || 0) + 0.006) * 100}%`"
+                      :y="`${(Number(block.y || 0) + 0.014) * 100}%`"
+                      font-size="9"
+                      font-weight="700"
+                      :fill="selectedCalibrationBlockIndex === idx ? '#0d9488' : '#b45309'"
                     >
-                      Q{{ block.startQ }}-{{ block.startQ + block.count - 1 }}
+                      Blok {{ idx + 1 }} · Q{{ block.startQ }}-{{ block.startQ + block.count - 1 }}
                     </text>
 
-                    <!-- Resize handles (8 points: 4 corners + 4 edges) -->
-                    <g class="resize-handles" v-if="selectedCalibrationBlockIndex === idx">
-                      <!-- Top-left -->
-                      <circle :cx="`${Number(block.x || 0) * 100}%`" :cy="`${Number(block.y || 0) * 100}%`"
-                        r="4" fill="#ef4444" class="cursor-nwse-resize hover-handle"
-                        @pointerdown="onResizeHandlePointerDown(idx, 'nw', $event)" />
-
-                      <!-- Top-center -->
-                      <circle :cx="`${(Number(block.x || 0) + Number(block.w || 0) / 2) * 100}%`" :cy="`${Number(block.y || 0) * 100}%`"
-                        r="4" fill="#f97316" class="cursor-ns-resize hover-handle"
-                        @pointerdown="onResizeHandlePointerDown(idx, 'n', $event)" />
-
-                      <!-- Top-right -->
-                      <circle :cx="`${(Number(block.x || 0) + Number(block.w || 0)) * 100}%`" :cy="`${Number(block.y || 0) * 100}%`"
-                        r="4" fill="#ef4444" class="cursor-nesw-resize hover-handle"
-                        @pointerdown="onResizeHandlePointerDown(idx, 'ne', $event)" />
-
-                      <!-- Middle-left -->
-                      <circle :cx="`${Number(block.x || 0) * 100}%`" :cy="`${(Number(block.y || 0) + Number(block.h || 0) / 2) * 100}%`"
-                        r="4" fill="#f97316" class="cursor-ew-resize hover-handle"
-                        @pointerdown="onResizeHandlePointerDown(idx, 'w', $event)" />
-
-                      <!-- Middle-right -->
-                      <circle :cx="`${(Number(block.x || 0) + Number(block.w || 0)) * 100}%`" :cy="`${(Number(block.y || 0) + Number(block.h || 0) / 2) * 100}%`"
-                        r="4" fill="#f97316" class="cursor-ew-resize hover-handle"
-                        @pointerdown="onResizeHandlePointerDown(idx, 'e', $event)" />
-
-                      <!-- Bottom-left -->
-                      <circle :cx="`${Number(block.x || 0) * 100}%`" :cy="`${(Number(block.y || 0) + Number(block.h || 0)) * 100}%`"
-                        r="4" fill="#ef4444" class="cursor-nesw-resize hover-handle"
-                        @pointerdown="onResizeHandlePointerDown(idx, 'sw', $event)" />
-
-                      <!-- Bottom-center -->
-                      <circle :cx="`${(Number(block.x || 0) + Number(block.w || 0) / 2) * 100}%`" :cy="`${(Number(block.y || 0) + Number(block.h || 0)) * 100}%`"
-                        r="4" fill="#f97316" class="cursor-ns-resize hover-handle"
-                        @pointerdown="onResizeHandlePointerDown(idx, 's', $event)" />
-
-                      <!-- Bottom-right -->
-                      <circle :cx="`${(Number(block.x || 0) + Number(block.w || 0)) * 100}%`" :cy="`${(Number(block.y || 0) + Number(block.h || 0)) * 100}%`"
-                        r="4" fill="#ef4444" class="cursor-se-resize hover-handle"
-                        @pointerdown="onResizeHandlePointerDown(idx, 'se', $event)" />
-                    </g>
+                    <text
+                      v-for="q in Number(block.count || 0)"
+                      :key="`row-no-${idx}-${q}`"
+                      :x="`${(Number(block.x || 0) + 0.002) * 100}%`"
+                      :y="`${(Number(block.y || 0) + (Number(block.h || 0) * ((q - 0.5) / Number(block.count || 1)))) * 100}%`"
+                      font-size="7"
+                      :fill="selectedCalibrationBlockIndex === idx ? '#0f766e' : '#6b7280'"
+                    >
+                      {{ Number(block.startQ || 1) + q - 1 }}
+                    </text>
                   </g>
                 </svg>
 
-                <!-- Block buttons (for selection and drag) -->
-                <button
+                <!-- Interactive block overlays (drag + easy resize handles) -->
+                <div
                   v-for="(block, idx) in scanCalibration.blocks"
                   :key="`overlay-${idx}`"
-                  type="button"
                   :style="calibrationBlockStyle(block, idx)"
-                  class="absolute rounded border-2 text-[10px] font-semibold flex items-start justify-start px-1 py-0.5 touch-none pointer-events-auto"
+                  class="calibration-block absolute rounded border-2 touch-none"
                   @pointerdown="onCalibrationBlockPointerDown(idx, $event)"
                 >
-                  B{{ idx + 1 }}
-                </button>
+                  <div class="pointer-events-none text-[10px] font-semibold px-1 py-0.5" :class="selectedCalibrationBlockIndex === idx ? 'text-teal-700' : 'text-amber-700'">
+                    B{{ idx + 1 }}
+                  </div>
+
+                  <button type="button" class="resize-handle corner nw" @pointerdown="onResizeHandlePointerDown(idx, 'nw', $event)"></button>
+                  <button type="button" class="resize-handle corner ne" @pointerdown="onResizeHandlePointerDown(idx, 'ne', $event)"></button>
+                  <button type="button" class="resize-handle corner sw" @pointerdown="onResizeHandlePointerDown(idx, 'sw', $event)"></button>
+                  <button type="button" class="resize-handle corner se" @pointerdown="onResizeHandlePointerDown(idx, 'se', $event)"></button>
+
+                  <button type="button" class="resize-handle edge n" @pointerdown="onResizeHandlePointerDown(idx, 'n', $event)"></button>
+                  <button type="button" class="resize-handle edge e" @pointerdown="onResizeHandlePointerDown(idx, 'e', $event)"></button>
+                  <button type="button" class="resize-handle edge s" @pointerdown="onResizeHandlePointerDown(idx, 's', $event)"></button>
+                  <button type="button" class="resize-handle edge w" @pointerdown="onResizeHandlePointerDown(idx, 'w', $event)"></button>
+                </div>
               </div>
             </div>
             <p v-else class="text-xs text-gray-400 italic">Pilih foto lembar jawab dulu agar overlay bisa digeser langsung.</p>
@@ -901,6 +891,9 @@ const selectedTeacherObj = computed(() => teachers.value.find(t => Number(t.id) 
 const selectedCalibrationBlock = computed(() => scanCalibration.blocks?.[selectedCalibrationBlockIndex.value] || null)
 const calibrationImageSrc = computed(() => previewSrc.value || lastResult?.value?.debug?.sourceImage || lastResultPreview.value || lastResult?.value?.previewUrl || null)
 const calibrationStageStyle = computed(() => ({ width: `${Math.max(1, Number(calibrationZoom.value) || 1) * 100}%` }))
+const calibrationGlobalCols = 12
+const calibrationGlobalRows = 12
+const calibrationBlockCols = 5
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
@@ -1448,6 +1441,7 @@ function calibrationBlockStyle(block, idx) {
 }
 
 function onCalibrationBlockPointerDown(idx, event) {
+  if (calibrationResize.active) return
   const block = scanCalibration.blocks?.[idx]
   if (!block) return
 
@@ -1503,6 +1497,7 @@ function onResizeHandlePointerDown(idx, handle, event) {
   calibrationResize.originW = Number(block.w || 0)
   calibrationResize.originH = Number(block.h || 0)
   event.currentTarget?.setPointerCapture?.(event.pointerId)
+  event.preventDefault()
   event.stopPropagation()
 }
 
@@ -1519,6 +1514,7 @@ function onCalibrationResizePointerMove(event) {
   const dx = (event.clientX - calibrationResize.startX) / rect.width
   const dy = (event.clientY - calibrationResize.startY) / rect.height
   const handle = calibrationResize.handle
+  const minSize = 0.04
 
   // Calculate new dimensions based on which handle is being dragged
   let newX = calibrationResize.originX
@@ -1528,23 +1524,23 @@ function onCalibrationResizePointerMove(event) {
 
   if (handle.includes('w')) {
     // Left edge
-    const delta = clamp(calibrationResize.originX + dx, 0, calibrationResize.originX + calibrationResize.originW - 0.01)
+    const delta = clamp(calibrationResize.originX + dx, 0, calibrationResize.originX + calibrationResize.originW - minSize)
     newW = calibrationResize.originW - (delta - calibrationResize.originX)
     newX = delta
   }
   if (handle.includes('e')) {
     // Right edge
-    newW = clamp(calibrationResize.originW + dx, 0.01, 1 - calibrationResize.originX)
+    newW = clamp(calibrationResize.originW + dx, minSize, 1 - calibrationResize.originX)
   }
   if (handle.includes('n')) {
     // Top edge
-    const delta = clamp(calibrationResize.originY + dy, 0, calibrationResize.originY + calibrationResize.originH - 0.01)
+    const delta = clamp(calibrationResize.originY + dy, 0, calibrationResize.originY + calibrationResize.originH - minSize)
     newH = calibrationResize.originH - (delta - calibrationResize.originY)
     newY = delta
   }
   if (handle.includes('s')) {
     // Bottom edge
-    newH = clamp(calibrationResize.originH + dy, 0.01, 1 - calibrationResize.originY)
+    newH = clamp(calibrationResize.originH + dy, minSize, 1 - calibrationResize.originY)
   }
 
   block.x = Number(newX.toFixed(4))
@@ -1697,34 +1693,101 @@ const savedResultGroups = computed(() => {
   opacity: 0;
 }
 
-/* Resize handle styles */
-.resize-handles circle {
-  cursor: pointer;
-  transition: r 0.2s ease, filter 0.2s ease;
+.calibration-block {
+  z-index: 20;
+  touch-action: none;
+  background: transparent;
 }
 
-.resize-handles circle:hover {
-  r: 6;
-  filter: drop-shadow(0 0 3px rgba(0,0,0,0.3));
+.resize-handle {
+  position: absolute;
+  border: none;
+  padding: 0;
+  background: transparent;
+  touch-action: none;
 }
 
-.cursor-nwse-resize {
-  cursor: nwse-resize;
+.resize-handle.corner {
+  width: 22px;
+  height: 22px;
+  margin: -11px;
 }
 
-.cursor-nesw-resize {
-  cursor: nesw-resize;
+.resize-handle.corner::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  background: #ef4444;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
 }
 
-.cursor-ns-resize {
+.resize-handle.edge {
+  background: transparent;
+}
+
+.resize-handle.n {
+  top: 0;
+  left: 16%;
+  width: 68%;
+  height: 16px;
+  transform: translateY(-50%);
   cursor: ns-resize;
 }
 
-.cursor-ew-resize {
+.resize-handle.s {
+  bottom: 0;
+  left: 16%;
+  width: 68%;
+  height: 16px;
+  transform: translateY(50%);
+  cursor: ns-resize;
+}
+
+.resize-handle.w {
+  left: 0;
+  top: 16%;
+  width: 16px;
+  height: 68%;
+  transform: translateX(-50%);
   cursor: ew-resize;
 }
 
-.cursor-se-resize {
-  cursor: se-resize;
+.resize-handle.e {
+  right: 0;
+  top: 16%;
+  width: 16px;
+  height: 68%;
+  transform: translateX(50%);
+  cursor: ew-resize;
+}
+
+.resize-handle.nw {
+  left: 0;
+  top: 0;
+  cursor: nwse-resize;
+}
+
+.resize-handle.ne {
+  right: 0;
+  top: 0;
+  cursor: nesw-resize;
+}
+
+.resize-handle.sw {
+  left: 0;
+  bottom: 0;
+  cursor: nesw-resize;
+}
+
+.resize-handle.se {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
 }
 </style>
