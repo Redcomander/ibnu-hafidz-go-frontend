@@ -102,6 +102,70 @@
       </div>
     </div>
 
+    <!-- Scan Calibration -->
+    <details class="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4" open>
+      <summary class="cursor-pointer flex items-center justify-between gap-3 text-sm font-semibold text-gray-700">
+        Penyesuaian Posisi Blok Scan
+      </summary>
+      <div class="mt-3 space-y-3">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div>
+            <label class="text-[11px] uppercase tracking-wide text-gray-400">Rotasi</label>
+            <select v-model.number="scanRotation" class="mt-1 w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5">
+              <option :value="0">0°</option>
+              <option :value="90">90°</option>
+              <option :value="180">180°</option>
+              <option :value="270">270°</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[11px] uppercase tracking-wide text-gray-400">Threshold</label>
+            <input v-model.number="scanCalibration.markedThreshold" type="number" min="0" max="255" class="mt-1 w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5" />
+          </div>
+          <div>
+            <label class="text-[11px] uppercase tracking-wide text-gray-400">Confidence Gap</label>
+            <input v-model.number="scanCalibration.confidenceGap" type="number" step="0.1" min="0" max="255" class="mt-1 w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5" />
+          </div>
+          <div class="flex items-end">
+            <button @click="resetCalibration" class="w-full text-xs font-semibold rounded-lg border border-gray-200 px-2 py-2 hover:bg-gray-50">Reset Default</button>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Blok Jawaban</p>
+          <div v-for="(block, idx) in scanCalibration.blocks" :key="idx" class="rounded-xl border border-gray-100 bg-gray-50 p-3">
+            <p class="text-xs font-semibold text-gray-600 mb-2">Blok {{ idx + 1 }} · Q{{ block.startQ }}-{{ block.startQ + block.count - 1 }}</p>
+            <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              <div>
+                <label class="text-[10px] text-gray-400">x</label>
+                <input v-model.number="block.x" type="number" step="0.01" min="0" max="1" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+              </div>
+              <div>
+                <label class="text-[10px] text-gray-400">y</label>
+                <input v-model.number="block.y" type="number" step="0.01" min="0" max="1" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+              </div>
+              <div>
+                <label class="text-[10px] text-gray-400">w</label>
+                <input v-model.number="block.w" type="number" step="0.01" min="0.01" max="1" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+              </div>
+              <div>
+                <label class="text-[10px] text-gray-400">h</label>
+                <input v-model.number="block.h" type="number" step="0.01" min="0.01" max="1" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+              </div>
+              <div>
+                <label class="text-[10px] text-gray-400">rowTop</label>
+                <input v-model.number="block.rowTop" type="number" step="0.01" min="0" max="0.9" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+              </div>
+              <div>
+                <label class="text-[10px] text-gray-400">rowBottom</label>
+                <input v-model.number="block.rowBottom" type="number" step="0.01" min="0.1" max="1" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+
     <!-- Scan Mode Tabs -->
     <div class="flex gap-2 bg-gray-100 rounded-xl p-1">
       <button v-for="mode in scanModes" :key="mode.key"
@@ -342,7 +406,7 @@
           </div>
 
           <!-- Answers Grid -->
-          <div v-if="lastResult.answers" class="mt-3">
+          <div v-if="lastResult.answers?.length" class="mt-3">
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Jawaban</p>
             <div class="grid grid-cols-5 gap-1.5">
               <div v-for="(ans, idx) in lastResult.answers" :key="idx"
@@ -356,6 +420,11 @@
                 <div class="leading-tight mt-0.5">{{ ans.detected || '–' }}</div>
               </div>
             </div>
+          </div>
+
+          <div v-else-if="lastResult.rawText" class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+            <p class="text-xs font-semibold text-amber-700 uppercase tracking-wide">Fallback OCR Text</p>
+            <p class="text-xs text-amber-800 mt-1 whitespace-pre-wrap">{{ lastResult.rawText }}</p>
           </div>
 
           <!-- Scanned image thumbnail -->
@@ -583,6 +652,20 @@ const scanModes = [
   { key: 'scanner', label: 'Scanner', icon: 'document' },
 ]
 const QUESTION_TOTAL = 50
+const DEFAULT_SCAN_CALIBRATION = {
+  markedThreshold: 45,
+  confidenceGap: 2.5,
+  questionColW: 0.1,
+  centerPadX: 0.15,
+  centerPadY: 0.2,
+  blocks: [
+    { startQ: 1, count: 10, x: 0.12, y: 0.37, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+    { startQ: 11, count: 10, x: 0.43, y: 0.37, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+    { startQ: 21, count: 10, x: 0.73, y: 0.37, w: 0.23, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+    { startQ: 31, count: 10, x: 0.12, y: 0.68, w: 0.27, h: 0.19, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+    { startQ: 41, count: 10, x: 0.43, y: 0.68, w: 0.27, h: 0.19, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+  ],
+}
 
 // Camera / file
 const cameraInput = ref(null)
@@ -604,6 +687,8 @@ const loadingSavedResultLinks = ref(false)
 const saveFailures = ref([])
 const retryingSaves = ref(false)
 const saveSuccessMessage = ref('')
+const scanRotation = ref(0)
+const scanCalibration = reactive(cloneCalibration(DEFAULT_SCAN_CALIBRATION))
 
 // Scanner hardware
 const scannerDevices = ref([])
@@ -715,6 +800,8 @@ async function doScan() {
     const fd = new FormData()
     fd.append('file', previewFile.value)
     fd.append('total', String(QUESTION_TOTAL))
+    fd.append('rotation', String(scanRotation.value || 0))
+    fd.append('calibration', JSON.stringify(scanCalibration))
     if (selectedAnswerKeyId.value) fd.append('answerKeyId', selectedAnswerKeyId.value)
     if (selectedLessonId.value) fd.append('lessonId', selectedLessonId.value)
     if (selectedClassId.value) fd.append('kelasId', selectedClassId.value)
@@ -745,6 +832,8 @@ async function doScanBulk() {
     const fd = new FormData()
     uploadFiles.value.forEach(f => fd.append('files', f))
     fd.append('total', String(QUESTION_TOTAL))
+    fd.append('rotation', String(scanRotation.value || 0))
+    fd.append('calibration', JSON.stringify(scanCalibration))
     if (selectedAnswerKeyId.value) fd.append('answerKeyId', selectedAnswerKeyId.value)
     if (selectedLessonId.value) fd.append('lessonId', selectedLessonId.value)
     if (selectedClassId.value) fd.append('kelasId', selectedClassId.value)
@@ -787,6 +876,8 @@ async function doHardwareScan() {
     const fd = new FormData()
     fd.append('deviceId', selectedScannerId.value)
     fd.append('total', String(QUESTION_TOTAL))
+    fd.append('rotation', String(scanRotation.value || 0))
+    fd.append('calibration', JSON.stringify(scanCalibration))
     if (selectedAnswerKeyId.value) fd.append('answerKeyId', selectedAnswerKeyId.value)
     if (selectedLessonId.value) fd.append('lessonId', selectedLessonId.value)
     if (selectedClassId.value) fd.append('kelasId', selectedClassId.value)
@@ -1124,9 +1215,68 @@ function buildResultContext() {
   }
 }
 
-function addResultContext(result) {
+function cloneCalibration(source) {
+  return JSON.parse(JSON.stringify(source))
+}
+
+function resetCalibration() {
+  const fresh = cloneCalibration(DEFAULT_SCAN_CALIBRATION)
+  scanCalibration.markedThreshold = fresh.markedThreshold
+  scanCalibration.confidenceGap = fresh.confidenceGap
+  scanCalibration.questionColW = fresh.questionColW
+  scanCalibration.centerPadX = fresh.centerPadX
+  scanCalibration.centerPadY = fresh.centerPadY
+  scanCalibration.blocks = fresh.blocks
+  scanRotation.value = 0
+}
+
+function toNumberOrNull(value) {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : null
+}
+
+function buildAnswersFromResult(result, scoreObj) {
+  const parsed = result?.parsedAnswers && typeof result.parsedAnswers === 'object' ? result.parsedAnswers : {}
+  const details = scoreObj?.details && typeof scoreObj.details === 'object' ? scoreObj.details : {}
+  const maxFromParsed = Object.keys(parsed).reduce((m, k) => Math.max(m, Number(k) || 0), 0)
+  const maxFromDetails = Object.keys(details).reduce((m, k) => Math.max(m, Number(k) || 0), 0)
+  const total = Math.max(QUESTION_TOTAL, maxFromParsed, maxFromDetails)
+
+  return Array.from({ length: total }, (_, idx) => {
+    const qn = idx + 1
+    const detail = details[qn] || details[String(qn)] || null
+    const detected = detail?.actual ?? parsed[qn] ?? parsed[String(qn)] ?? null
+    const expected = detail?.expected ?? null
+    const correct = typeof detail?.correct === 'boolean' ? detail.correct : null
+    return { detected, expected, correct }
+  })
+}
+
+function normalizeScanResult(result) {
+  const scoreObj = result?.score && typeof result.score === 'object' ? result.score : null
+  const scoreRaw = scoreObj?.score ?? result?.score
+  const score = toNumberOrNull(scoreRaw)
+  const correct = toNumberOrNull(scoreObj?.correct ?? result?.correct) ?? 0
+  const wrong = toNumberOrNull(scoreObj?.wrong ?? result?.wrong) ?? 0
+  const total = toNumberOrNull(scoreObj?.total ?? result?.total) ?? QUESTION_TOTAL
+  const blank = toNumberOrNull(result?.blank) ?? Math.max(0, total - correct - wrong)
+  const answers = buildAnswersFromResult(result, scoreObj)
+
   return {
     ...(result || {}),
+    filename: result?.filename || result?.fileName || null,
+    score,
+    correct,
+    wrong,
+    blank,
+    answers,
+    previewUrl: result?.debug?.overlayImage || result?.debug?.processedImage || result?.debug?.sourceImage || result?.previewUrl || null,
+  }
+}
+
+function addResultContext(result) {
+  return {
+    ...normalizeScanResult(result),
     metaContext: buildResultContext(),
   }
 }
