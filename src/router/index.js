@@ -333,6 +333,12 @@ const routes = [
         component: () => import('@/views/ocr/OcrView.vue'),
         meta: { title: 'Scanner Lembar Jawab' },
       },
+      {
+        path: 'ocr/results',
+        name: 'ocr-results',
+        component: () => import('@/views/ocr/OcrResultsView.vue'),
+        meta: { title: 'Hasil OCR Terintegrasi' },
+      },
     ],
   },
 

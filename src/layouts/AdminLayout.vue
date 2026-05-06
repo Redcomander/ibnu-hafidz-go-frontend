@@ -520,6 +520,14 @@ const navItems = [
     activeOn: ["/dashboard/ocr"],
     menuKey: 'ocr_scanner',
   },
+  {
+    to: "/dashboard/ocr/results",
+    icon: "document",
+    label: "Hasil OCR",
+    permission: "dashboard.view",
+    activeOn: ["/dashboard/ocr/results"],
+    menuKey: 'ocr_results',
+  },
 
   { header: 'Laundry & Sarpras' },
   {

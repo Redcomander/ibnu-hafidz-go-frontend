@@ -266,6 +266,21 @@
       </button>
     </div>
 
+    <div v-if="saveFailures.length > 0" class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+      <SvgIcon name="document" :size="18" class="text-amber-600 mt-0.5 shrink-0" />
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-amber-800">Sebagian hasil belum tersimpan</p>
+        <p class="text-xs text-amber-700 mt-0.5">{{ saveFailures.length }} data gagal disimpan. Hasil scan tetap aman, tap Coba Lagi untuk sinkron ulang.</p>
+      </div>
+      <button @click="retryFailedSaves" :disabled="retryingSaves" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 disabled:opacity-60">
+        {{ retryingSaves ? 'Mencoba...' : 'Coba Lagi' }}
+      </button>
+    </div>
+
+    <div v-if="saveSuccessMessage" class="bg-green-50 border border-green-200 rounded-xl p-3 text-xs text-green-700">
+      {{ saveSuccessMessage }}
+    </div>
+
     <!-- Scan Result -->
     <transition name="fade-up">
       <div v-if="lastResult" class="space-y-4">
@@ -506,13 +521,13 @@
                 <input v-model="newKey.name" placeholder="Nama (misal: UTS Kelas 6)"
                   class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
                 <div class="space-y-2">
-                  <p class="text-xs text-gray-500">Jawaban soal 1–35 (A/B/C/D/E)</p>
+                  <p class="text-xs text-gray-500">Jawaban soal 1–50 (A/B/C/D/E)</p>
                   <div class="grid grid-cols-5 gap-1.5">
-                    <div v-for="n in 35" :key="n" class="space-y-0.5">
+                    <div v-for="n in QUESTION_TOTAL" :key="n" class="space-y-0.5">
                       <div class="text-[10px] text-gray-400 text-center">{{ n }}</div>
                       <input v-model="newKey.answers[n-1]"
                         maxlength="1"
-                        @input="e => { newKey.answers[n-1] = e.target.value.toUpperCase(); if(e.target.value && n < 35) focusNext(n); }"
+                        @input="e => { newKey.answers[n-1] = e.target.value.toUpperCase(); if(e.target.value && n < QUESTION_TOTAL) focusNext(n); }"
                         :ref="el => { if(el) answerInputRefs[n-1] = el }"
                         class="w-full text-center text-sm font-bold border border-gray-200 rounded-lg py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary uppercase" />
                     </div>
@@ -567,6 +582,7 @@ const scanModes = [
   { key: 'upload', label: 'Upload', icon: 'download' },
   { key: 'scanner', label: 'Scanner', icon: 'document' },
 ]
+const QUESTION_TOTAL = 50
 
 // Camera / file
 const cameraInput = ref(null)
@@ -585,6 +601,9 @@ const lastResult = ref(null)
 const bulkResults = ref([])
 const savedResultLinks = ref([])
 const loadingSavedResultLinks = ref(false)
+const saveFailures = ref([])
+const retryingSaves = ref(false)
+const saveSuccessMessage = ref('')
 
 // Scanner hardware
 const scannerDevices = ref([])
@@ -598,7 +617,7 @@ const showAnswerKeyModal = ref(false)
 const savingKey = ref(false)
 const newKey = reactive({
   name: '',
-  answers: Array(35).fill(''),
+  answers: Array(QUESTION_TOTAL).fill(''),
 })
 const answerInputRefs = ref([])
 
@@ -694,7 +713,8 @@ async function doScan() {
 
   try {
     const fd = new FormData()
-    fd.append('image', previewFile.value)
+    fd.append('file', previewFile.value)
+    fd.append('total', String(QUESTION_TOTAL))
     if (selectedAnswerKeyId.value) fd.append('answerKeyId', selectedAnswerKeyId.value)
     if (selectedLessonId.value) fd.append('lessonId', selectedLessonId.value)
     if (selectedClassId.value) fd.append('kelasId', selectedClassId.value)
@@ -702,7 +722,10 @@ async function doScan() {
 
     const res = await ocrScan(fd)
     lastResult.value = addResultContext(res.data)
-    await saveResultLink(lastResult.value, 'scan')
+    const persisted = await saveResultLink(lastResult.value, 'scan')
+    if (!persisted.ok) {
+      enqueueSaveFailure(lastResult.value, 'scan')
+    }
     await loadSavedResultLinks()
   } catch (err) {
     scanError.value = err.response?.data?.message || err.response?.data?.error || err.message || 'Gagal memproses gambar'
@@ -720,17 +743,31 @@ async function doScanBulk() {
 
   try {
     const fd = new FormData()
-    uploadFiles.value.forEach(f => fd.append('images', f))
+    uploadFiles.value.forEach(f => fd.append('files', f))
+    fd.append('total', String(QUESTION_TOTAL))
     if (selectedAnswerKeyId.value) fd.append('answerKeyId', selectedAnswerKeyId.value)
     if (selectedLessonId.value) fd.append('lessonId', selectedLessonId.value)
     if (selectedClassId.value) fd.append('kelasId', selectedClassId.value)
     if (selectedTeacherId.value) fd.append('teacherId', selectedTeacherId.value)
 
     const res = await ocrScanBulk(fd)
-    const raw = res.data?.results || []
+    const raw = Array.isArray(res.data?.items)
+      ? res.data.items
+      : Array.isArray(res.data?.results)
+        ? res.data.results
+        : []
     bulkResults.value = raw.map(item => addResultContext(item))
     const savable = bulkResults.value.filter(item => !item?.error)
-    await Promise.all(savable.map(item => saveResultLink(item, 'scan-bulk')))
+    const persisted = await runWithConcurrency(
+      savable,
+      (item) => saveResultLink(item, 'scan-bulk'),
+      3,
+    )
+    persisted.forEach((status, idx) => {
+      if (!status.ok) {
+        enqueueSaveFailure(savable[idx], 'scan-bulk')
+      }
+    })
     await loadSavedResultLinks()
   } catch (err) {
     scanError.value = err.response?.data?.message || err.message || 'Gagal memproses gambar'
@@ -749,6 +786,7 @@ async function doHardwareScan() {
   try {
     const fd = new FormData()
     fd.append('deviceId', selectedScannerId.value)
+    fd.append('total', String(QUESTION_TOTAL))
     if (selectedAnswerKeyId.value) fd.append('answerKeyId', selectedAnswerKeyId.value)
     if (selectedLessonId.value) fd.append('lessonId', selectedLessonId.value)
     if (selectedClassId.value) fd.append('kelasId', selectedClassId.value)
@@ -756,7 +794,10 @@ async function doHardwareScan() {
 
     const res = await ocrScanHardware(fd)
     lastResult.value = addResultContext(res.data)
-    await saveResultLink(lastResult.value, 'scan-hardware')
+    const persisted = await saveResultLink(lastResult.value, 'scan-hardware')
+    if (!persisted.ok) {
+      enqueueSaveFailure(lastResult.value, 'scan-hardware')
+    }
     await loadSavedResultLinks()
   } catch (err) {
     scanError.value = err.response?.data?.message || err.message || 'Gagal scan dengan scanner'
@@ -819,8 +860,10 @@ async function loadSavedResultLinks() {
 
 async function saveResultLink(result, source) {
   const ctx = getResultContext(result)
+  const idempotencyKey = buildIdempotencyKey(result, source, ctx)
   const payload = {
     source,
+    idempotency_key: idempotencyKey,
     filename: result?.filename || result?.fileName || null,
     score: result?.score ?? null,
     correct: result?.correct ?? null,
@@ -836,9 +879,95 @@ async function saveResultLink(result, source) {
 
   try {
     await ocrCreateResultLink(payload)
+    return { ok: true }
   } catch {
-    // Do not block OCR flow when persistence fails.
+    return { ok: false }
   }
+}
+
+function enqueueSaveFailure(result, source) {
+  saveFailures.value.push({
+    result,
+    source,
+    id: `${source}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  })
+}
+
+async function retryFailedSaves() {
+  if (!saveFailures.value.length || retryingSaves.value) return
+
+  retryingSaves.value = true
+  const queued = [...saveFailures.value]
+  saveFailures.value = []
+
+  try {
+    const beforeFailed = queued.length
+    for (const item of queued) {
+      const status = await saveResultLink(item.result, item.source)
+      if (!status.ok) {
+        saveFailures.value.push(item)
+      }
+    }
+
+    await loadSavedResultLinks()
+    const recovered = beforeFailed - saveFailures.value.length
+    if (recovered > 0) {
+      saveSuccessMessage.value = `${recovered} data berhasil disinkronkan.`
+      setTimeout(() => {
+        saveSuccessMessage.value = ''
+      }, 2500)
+    }
+  } finally {
+    retryingSaves.value = false
+  }
+}
+
+async function runWithConcurrency(items, worker, concurrency = 3) {
+  const limit = Math.max(1, Number(concurrency) || 1)
+  const results = new Array(items.length)
+  let nextIndex = 0
+
+  async function consume() {
+    while (true) {
+      const current = nextIndex
+      nextIndex += 1
+      if (current >= items.length) return
+      results[current] = await worker(items[current], current)
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => consume())
+  await Promise.all(workers)
+  return results
+}
+
+function hashString(input) {
+  let hash = 2166136261
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i)
+    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24)
+  }
+  return (hash >>> 0).toString(16)
+}
+
+function buildIdempotencyKey(result, source, ctx) {
+  const basis = {
+    source,
+    filename: result?.filename || result?.fileName || null,
+    score: result?.score ?? null,
+    correct: result?.correct ?? null,
+    wrong: result?.wrong ?? null,
+    blank: result?.blank ?? null,
+    lessonId: ctx?.lessonId || null,
+    classId: ctx?.classId || null,
+    teacherId: ctx?.teacherId || null,
+    answerKeyId: selectedAnswerKeyId.value || null,
+    answers: Array.isArray(result?.answers)
+      ? result.answers.map((x) => `${x?.detected || ''}:${x?.correct}`).join('|')
+      : null,
+  }
+
+  return `ocr-${hashString(JSON.stringify(basis))}`
 }
 
 async function loadLessons() {
@@ -925,9 +1054,9 @@ async function saveNewAnswerKey() {
   }
   savingKey.value = true
   try {
-    await ocrSaveAnswerKey({ name: newKey.name, answers: newKey.answers })
+    await ocrSaveAnswerKey({ name: newKey.name, answers: newKey.answers, total: QUESTION_TOTAL })
     newKey.name = ''
-    newKey.answers = Array(35).fill('')
+    newKey.answers = Array(QUESTION_TOTAL).fill('')
     await loadAnswerKeys()
   } catch (err) {
     alert(err.response?.data?.message || 'Gagal menyimpan kunci jawaban')

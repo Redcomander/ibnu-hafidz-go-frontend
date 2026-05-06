@@ -33,8 +33,9 @@ export const ocrGetResults = (params) => api.get(`${BASE}/results`, { params })
 export const ocrDeleteResult = (id) => api.delete(`${BASE}/results/${id}`)
 
 // Persisted result links (Go backend)
-export const ocrGetResultLinks = (params) => api.get(`${BASE}/result-links`, { params })
-export const ocrCreateResultLink = (data) => api.post(`${BASE}/result-links`, data)
+export const ocrGetResultLinks = (params) => api.get('/ocr-result-links/', { params })
+export const ocrCreateResultLink = (data) => api.post('/ocr-result-links/', data)
+export const ocrUpdateResultLinkStudent = (id, data) => api.put(`/ocr-result-links/${id}/student`, data)
 
 // Service capabilities
 export const ocrCapabilities = () => api.get(`${BASE}/capabilities`)
