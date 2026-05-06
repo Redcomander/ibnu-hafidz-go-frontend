@@ -280,6 +280,25 @@
                   class="calibration-block absolute rounded border-2 touch-none"
                   @pointerdown="onCalibrationBlockPointerDown(idx, $event)"
                 >
+                  <div class="pointer-events-none absolute inset-0">
+                    <div
+                      v-for="col in getBlockColLabelCenters(block)"
+                      :key="`col-badge-${idx}-${col.colIndex}`"
+                      class="calib-col-badge"
+                      :style="{ left: `${col.ratio * 100}%` }"
+                    >
+                      {{ col.label }}
+                    </div>
+                    <div
+                      v-for="row in getBlockRowLabelCenters(block)"
+                      :key="`row-badge-${idx}-${row.rowIndex}`"
+                      class="calib-row-badge"
+                      :style="{ top: `${row.ratio * 100}%` }"
+                    >
+                      {{ row.qn }}
+                    </div>
+                  </div>
+
                   <div class="pointer-events-none text-[10px] font-semibold px-1 py-0.5" :class="selectedCalibrationBlockIndex === idx ? 'text-teal-700' : 'text-amber-700'">
                     B{{ idx + 1 }}
                   </div>
@@ -1119,6 +1138,7 @@ const calibrationStageStyle = computed(() => ({ width: `${Math.max(1, Number(cal
 const calibrationGlobalCols = 12
 const calibrationGlobalRows = 12
 const calibrationBlockCols = 5
+const CALIBRATION_OPTION_LABELS = ['A', 'B', 'C', 'D', 'E']
 
 function buildUniformBands(segmentCount) {
   const safeCount = Math.max(1, Number(segmentCount) || 1)
@@ -1159,9 +1179,19 @@ function getBlockRowBands(block) {
   return sanitizeGuideBands(block?.rowBands, Number(block?.count || 1), 0.02)
 }
 
+function getDisplayColRatio(block, localRatio) {
+  const split = getBlockSplitRatio(block)
+  const optionSpan = Math.max(0.05, 1 - split)
+  return Number((split + optionSpan * localRatio).toFixed(4))
+}
+
 function getColGuideRatios(block) {
   const bands = getBlockOptionBands(block)
-  return bands.slice(1, -1).map((ratio, idx) => ({ ratio, bandIndex: idx + 1 }))
+  return bands.slice(1, -1).map((ratio, idx) => ({
+    ratio: getDisplayColRatio(block, ratio),
+    localRatio: ratio,
+    bandIndex: idx + 1,
+  }))
 }
 
 function getRowGuideRatios(block) {
@@ -1171,6 +1201,31 @@ function getRowGuideRatios(block) {
 
 function getBlockSplitRatio(block) {
   return Number(clamp(Number(block?.questionColW || scanCalibration.questionColW || 0.1), 0.03, 0.45).toFixed(4))
+}
+
+function getBlockColLabelCenters(block) {
+  const bands = getBlockOptionBands(block)
+  return CALIBRATION_OPTION_LABELS.map((label, colIndex) => {
+    const localMid = (Number(bands[colIndex]) + Number(bands[colIndex + 1])) / 2
+    return {
+      label,
+      colIndex,
+      ratio: getDisplayColRatio(block, localMid),
+    }
+  })
+}
+
+function getBlockRowLabelCenters(block) {
+  const rowBands = getBlockRowBands(block)
+  const startQ = Number(block?.startQ || 1)
+  return Array.from({ length: Number(block?.count || 0) }, (_, rowIndex) => {
+    const ratio = (Number(rowBands[rowIndex]) + Number(rowBands[rowIndex + 1])) / 2
+    return {
+      rowIndex,
+      ratio: Number(ratio.toFixed(4)),
+      qn: startQ + rowIndex,
+    }
+  })
 }
 
 function ensureBlockGuideBands(block) {
@@ -1934,7 +1989,8 @@ function onCalibrationGuidePointerMove(event) {
     ? (event.clientX - calibrationGuideDrag.startX) / rect.width
     : (event.clientY - calibrationGuideDrag.startY) / rect.height
 
-  const deltaLocal = deltaStage / blockScale
+  const optionSpan = axis === 'col' ? Math.max(0.05, 1 - getBlockSplitRatio(block)) : 1
+  const deltaLocal = deltaStage / (blockScale * optionSpan)
   const rawValue = calibrationGuideDrag.startValue + deltaLocal
   const minGap = axis === 'col' ? 0.04 : 0.02
   const min = Number(bands[bandIndex - 1]) + minGap
@@ -2393,5 +2449,35 @@ const savedResultGroups = computed(() => {
   width: 3px;
   transform: translateX(-50%);
   background: rgba(245, 158, 11, 0.95);
+}
+
+.calib-col-badge {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(17, 24, 39, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 9999px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.1;
+  padding: 1px 4px;
+}
+
+.calib-row-badge {
+  position: absolute;
+  left: 4px;
+  transform: translateY(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 6px;
+  line-height: 1;
+  padding: 2px 4px;
 }
 </style>
