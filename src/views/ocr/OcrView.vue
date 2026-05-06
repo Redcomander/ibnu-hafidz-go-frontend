@@ -161,6 +161,31 @@
             </button>
           </div>
 
+          <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <button
+              @click="selectBlockByStartQ(31)"
+              class="rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs font-semibold hover:bg-gray-50"
+            >
+              Fokus Q31-40
+            </button>
+            <button
+              @click="selectBlockByStartQ(41)"
+              class="rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs font-semibold hover:bg-gray-50"
+            >
+              Fokus Q41-50
+            </button>
+            <button
+              @click="rescanAfterCalibrate"
+              :disabled="!previewFile || scanning"
+              class="rounded-lg border border-primary/30 bg-primary/5 px-2 py-2 text-xs font-semibold text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {{ scanning ? 'Memproses...' : 'Rescan Kalibrasi' }}
+            </button>
+            <div class="text-[10px] text-gray-500 flex items-center px-2">
+              Rescan pakai foto aktif + kalibrasi terbaru
+            </div>
+          </div>
+
           <div class="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2">
             <div class="flex items-center justify-between gap-2">
               <p class="text-xs font-semibold text-gray-700">Drag & Drop Overlay</p>
@@ -264,6 +289,38 @@
 
           <div v-if="selectedCalibrationBlock" class="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-3">
             <p class="text-xs font-semibold text-gray-700">Atur Blok {{ selectedCalibrationBlockIndex + 1 }} · Q{{ selectedCalibrationBlock.startQ }}-{{ selectedCalibrationBlock.startQ + selectedCalibrationBlock.count - 1 }}</p>
+
+            <div class="rounded-lg border border-gray-200 bg-white p-2.5 space-y-2">
+              <p class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Manual Kolom & Baris</p>
+
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <button @click="nudgeBlock('questionColW', -1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">ColW-</button>
+                <button @click="nudgeGlobalCalibration('centerPadX', -1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">PadX-</button>
+                <button @click="nudgeGlobalCalibration('centerPadY', -1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">PadY-</button>
+                <button @click="nudgeBlock('questionColW', 1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">ColW+</button>
+                <button @click="nudgeGlobalCalibration('centerPadX', 1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">PadX+</button>
+                <button @click="nudgeGlobalCalibration('centerPadY', 1)" class="rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold">PadY+</button>
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div>
+                  <label class="text-[10px] text-gray-400">block.questionColW</label>
+                  <input v-model.number="selectedCalibrationBlock.questionColW" type="number" step="0.005" min="0.02" max="0.3" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+                </div>
+                <div>
+                  <label class="text-[10px] text-gray-400">global.questionColW</label>
+                  <input v-model.number="scanCalibration.questionColW" type="number" step="0.005" min="0.02" max="0.3" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+                </div>
+                <div>
+                  <label class="text-[10px] text-gray-400">centerPadX</label>
+                  <input v-model.number="scanCalibration.centerPadX" type="number" step="0.005" min="0" max="0.5" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+                </div>
+                <div>
+                  <label class="text-[10px] text-gray-400">centerPadY</label>
+                  <input v-model.number="scanCalibration.centerPadY" type="number" step="0.005" min="0" max="0.5" class="mt-0.5 w-full text-xs border border-gray-200 rounded px-2 py-1" />
+                </div>
+              </div>
+            </div>
 
             <div class="grid grid-cols-3 gap-2">
               <button @click="nudgeBlock('x', -1)" class="rounded-lg border border-gray-200 bg-white py-2 text-sm font-semibold">X-</button>
@@ -1549,6 +1606,30 @@ function onCalibrationResizePointerMove(event) {
   block.h = Number(newH.toFixed(4))
 }
 
+function selectBlockByStartQ(startQ) {
+  const idx = scanCalibration.blocks.findIndex((b) => Number(b?.startQ) === Number(startQ))
+  if (idx >= 0) selectedCalibrationBlockIndex.value = idx
+}
+
+async function rescanAfterCalibrate() {
+  if (!previewFile.value || scanning.value) return
+  await doScan()
+}
+
+function nudgeGlobalCalibration(field, direction) {
+  const step = Number(calibrationStep.value) || 0.01
+  const current = Number(scanCalibration[field] || 0)
+  const next = current + step * direction
+
+  if (field === 'centerPadX' || field === 'centerPadY') {
+    scanCalibration[field] = Number(clamp(next, 0, 0.5).toFixed(4))
+    return
+  }
+  if (field === 'questionColW') {
+    scanCalibration[field] = Number(clamp(next, 0.02, 0.3).toFixed(4))
+  }
+}
+
 function nudgeBlock(field, direction) {
   const block = selectedCalibrationBlock.value
   if (!block) return
@@ -1558,8 +1639,10 @@ function nudgeBlock(field, direction) {
 
   if (field === 'x' || field === 'y' || field === 'rowTop' || field === 'rowBottom') {
     block[field] = Number(clamp(next, 0, 1).toFixed(4))
-  } else if (field === 'w' || field === 'h' || field === 'questionColW') {
+  } else if (field === 'w' || field === 'h') {
     block[field] = Number(clamp(next, 0.01, 1).toFixed(4))
+  } else if (field === 'questionColW') {
+    block[field] = Number(clamp(next, 0.02, 0.3).toFixed(4))
   }
 
   if (block.rowTop >= block.rowBottom) {
