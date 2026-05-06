@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import axios from 'axios'
 import api from '@/api'
 import router from '@/router'
 
@@ -89,7 +90,6 @@ export const useAuthStore = defineStore('auth', () => {
   // Try silent refresh on app load (uses raw axios to bypass interceptor)
   async function tryRefresh() {
     try {
-      const axios = (await import('axios')).default
       const { data } = await axios.post('/api/auth/refresh', null, {
         withCredentials: true,
       })
