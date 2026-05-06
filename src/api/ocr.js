@@ -16,7 +16,7 @@ export const ocrScannerDevices = () => api.get(`${BASE}/scanner/devices`)
 export const ocrScanHardware = (formData) => api.post(`${BASE}/scan-hardware`, formData)
 
 // Calibration
-export const ocrGetCalibration = () => api.get(`${BASE}/calibration`)
+export const ocrGetCalibration = () => api.get(`${BASE}/calibration/default`)
 export const ocrSaveCalibration = (data) => api.post(`${BASE}/calibration`, data)
 export const ocrDeleteCalibration = () => api.delete(`${BASE}/calibration`)
 export const ocrGetCalibrationPreview = () => api.get(`${BASE}/calibration/preview`)

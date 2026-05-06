@@ -638,7 +638,7 @@ import SvgIcon from '@/components/ui/SvgIcon.vue'
 import api from '@/api'
 import {
   ocrHealth, ocrScan, ocrScanBulk, ocrScanHardware,
-  ocrScannerDevices, ocrGetAnswerKeys, ocrSaveAnswerKey, ocrDeleteAnswerKey,
+  ocrScannerDevices, ocrGetAnswerKeys, ocrSaveAnswerKey, ocrDeleteAnswerKey, ocrGetCalibration,
   ocrGetResultLinks, ocrCreateResultLink,
 } from '@/api/ocr.js'
 
@@ -729,6 +729,7 @@ onMounted(async () => {
   } catch {
     serviceOffline.value = true
   }
+  await loadCalibrationDefaults()
   await loadAnswerKeys()
   await loadAcademicData()
   await loadSavedResultLinks()
@@ -1219,14 +1220,37 @@ function cloneCalibration(source) {
   return JSON.parse(JSON.stringify(source))
 }
 
+function applyCalibration(calibration) {
+  const base = cloneCalibration(DEFAULT_SCAN_CALIBRATION)
+  const incoming = calibration && typeof calibration === 'object' ? calibration : {}
+
+  scanCalibration.markedThreshold = Number.isFinite(Number(incoming.markedThreshold)) ? Number(incoming.markedThreshold) : base.markedThreshold
+  scanCalibration.confidenceGap = Number.isFinite(Number(incoming.confidenceGap)) ? Number(incoming.confidenceGap) : base.confidenceGap
+  scanCalibration.questionColW = Number.isFinite(Number(incoming.questionColW)) ? Number(incoming.questionColW) : base.questionColW
+  scanCalibration.centerPadX = Number.isFinite(Number(incoming.centerPadX)) ? Number(incoming.centerPadX) : base.centerPadX
+  scanCalibration.centerPadY = Number.isFinite(Number(incoming.centerPadY)) ? Number(incoming.centerPadY) : base.centerPadY
+
+  const incomingBlocks = Array.isArray(incoming.blocks) ? incoming.blocks : []
+  scanCalibration.blocks = base.blocks.map((block, idx) => {
+    const src = incomingBlocks[idx] || {}
+    return {
+      ...block,
+      ...src,
+    }
+  })
+}
+
+async function loadCalibrationDefaults() {
+  try {
+    const res = await ocrGetCalibration()
+    applyCalibration(res.data?.calibration || res.data)
+  } catch {
+    applyCalibration(DEFAULT_SCAN_CALIBRATION)
+  }
+}
+
 function resetCalibration() {
-  const fresh = cloneCalibration(DEFAULT_SCAN_CALIBRATION)
-  scanCalibration.markedThreshold = fresh.markedThreshold
-  scanCalibration.confidenceGap = fresh.confidenceGap
-  scanCalibration.questionColW = fresh.questionColW
-  scanCalibration.centerPadX = fresh.centerPadX
-  scanCalibration.centerPadY = fresh.centerPadY
-  scanCalibration.blocks = fresh.blocks
+  applyCalibration(DEFAULT_SCAN_CALIBRATION)
   scanRotation.value = 0
 }
 
