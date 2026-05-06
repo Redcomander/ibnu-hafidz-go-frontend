@@ -108,7 +108,13 @@
         Penyesuaian Posisi Blok Scan
       </summary>
       <div class="mt-3 space-y-3">
-        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <div>
+            <label class="text-[11px] uppercase tracking-wide text-gray-400">Layout Soal</label>
+            <select v-model.number="selectedQuestionTotal" class="mt-1 w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5">
+              <option v-for="total in QUESTION_LAYOUTS" :key="total" :value="total">{{ total }} Soal</option>
+            </select>
+          </div>
           <div>
             <label class="text-[11px] uppercase tracking-wide text-gray-400">Rotasi</label>
             <select v-model.number="scanRotation" class="mt-1 w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5">
@@ -656,9 +662,14 @@
 
           <!-- Scanned image thumbnail -->
           <div v-if="lastResult.previewUrl || lastResultPreview" class="mt-4 border-t border-gray-100 pt-4">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Preview</p>
-            <img :src="lastResult.previewUrl || lastResultPreview"
-              class="rounded-xl max-h-48 w-full object-contain bg-gray-50 border border-gray-100" />
+            <div class="mb-2 flex items-center justify-between gap-2">
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Preview</p>
+              <button @click="openResultPreview(lastResult.previewUrl || lastResultPreview)" class="text-xs font-semibold text-primary hover:underline">Perbesar</button>
+            </div>
+            <button @click="openResultPreview(lastResult.previewUrl || lastResultPreview)" class="block w-full">
+              <img :src="lastResult.previewUrl || lastResultPreview"
+                class="rounded-xl max-h-72 w-full object-contain bg-gray-50 border border-gray-100" />
+            </button>
           </div>
         </div>
       </div>
@@ -817,13 +828,13 @@
                 <input v-model="newKey.name" placeholder="Nama (misal: UTS Kelas 6)"
                   class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
                 <div class="space-y-2">
-                  <p class="text-xs text-gray-500">Jawaban soal 1–50 (A/B/C/D/E)</p>
+                  <p class="text-xs text-gray-500">Jawaban soal 1–{{ questionTotal }} (A/B/C/D/E)</p>
                   <div class="grid grid-cols-5 gap-1.5">
-                    <div v-for="n in QUESTION_TOTAL" :key="n" class="space-y-0.5">
+                    <div v-for="n in questionTotal" :key="n" class="space-y-0.5">
                       <div class="text-[10px] text-gray-400 text-center">{{ n }}</div>
                       <input v-model="newKey.answers[n-1]"
                         maxlength="1"
-                        @input="e => { newKey.answers[n-1] = e.target.value.toUpperCase(); if(e.target.value && n < QUESTION_TOTAL) focusNext(n); }"
+                        @input="e => { newKey.answers[n-1] = e.target.value.toUpperCase(); if(e.target.value && n < questionTotal) focusNext(n); }"
                         :ref="el => { if(el) answerInputRefs[n-1] = el }"
                         class="w-full text-center text-sm font-bold border border-gray-200 rounded-lg py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary uppercase" />
                     </div>
@@ -856,11 +867,49 @@
       </transition>
     </teleport>
 
+    <teleport to="body">
+      <transition name="fade">
+        <div v-if="showResultPreviewModal" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="closeResultPreview">
+          <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+          <div class="relative w-full max-w-6xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+              <p class="text-sm font-semibold text-gray-800">Preview Hasil Scan</p>
+              <div class="flex items-center gap-2">
+                <button @click="zoomOutResultPreview" class="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-semibold">-</button>
+                <span class="min-w-[3rem] text-center text-xs text-gray-500">{{ Math.round(resultPreviewZoom * 100) }}%</span>
+                <button @click="zoomInResultPreview" class="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-semibold">+</button>
+                <button @click="closeResultPreview" class="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-semibold">Tutup</button>
+              </div>
+            </div>
+            <div
+              ref="resultPreviewViewportRef"
+              class="max-h-[85vh] overflow-auto bg-gray-950 p-4"
+              :class="resultPreviewPan.active ? 'cursor-grabbing' : 'cursor-grab'"
+              @wheel.prevent="onResultPreviewWheel"
+              @pointerdown="onResultPreviewPointerDown"
+              @pointermove="onResultPreviewPointerMove"
+              @pointerup="onResultPreviewPointerUp"
+              @pointercancel="onResultPreviewPointerUp"
+              @pointerleave="onResultPreviewPointerUp"
+            >
+              <img
+                v-if="resultPreviewSrc"
+                :src="resultPreviewSrc"
+                alt="Preview hasil scan"
+                class="mx-auto max-w-full origin-top object-contain"
+                :style="{ transform: `scale(${resultPreviewZoom})`, transformOrigin: 'top center' }"
+              />
+            </div>
+          </div>
+        </div>
+      </transition>
+    </teleport>
+
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, reactive, computed } from 'vue'
+import { ref, onMounted, reactive, computed, watch } from 'vue'
 import SvgIcon from '@/components/ui/SvgIcon.vue'
 import api from '@/api'
 import {
@@ -878,20 +927,54 @@ const scanModes = [
   { key: 'upload', label: 'Upload', icon: 'download' },
   { key: 'scanner', label: 'Scanner', icon: 'document' },
 ]
-const QUESTION_TOTAL = 50
-const DEFAULT_SCAN_CALIBRATION = {
-  markedThreshold: 45,
-  confidenceGap: 2.5,
-  questionColW: 0.1,
-  centerPadX: 0.15,
-  centerPadY: 0.2,
-  blocks: [
-    { startQ: 1, count: 10, x: 0.12, y: 0.37, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
-    { startQ: 11, count: 10, x: 0.43, y: 0.37, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
-    { startQ: 21, count: 10, x: 0.73, y: 0.37, w: 0.23, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
-    { startQ: 31, count: 10, x: 0.12, y: 0.64, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
-    { startQ: 41, count: 10, x: 0.43, y: 0.64, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
-  ],
+const QUESTION_LAYOUTS = [30, 35, 50]
+const selectedQuestionTotal = ref(50)
+const questionTotal = computed(() => selectedQuestionTotal.value)
+
+function buildDefaultScanCalibration(total) {
+  const normalizedTotal = Number(total) === 30 || Number(total) === 35 || Number(total) === 50 ? Number(total) : 35
+
+  const base = {
+    markedThreshold: 45,
+    confidenceGap: 2.5,
+    questionColW: 0.1,
+    centerPadX: 0.15,
+    centerPadY: 0.2,
+  }
+
+  if (normalizedTotal === 30) {
+    return {
+      ...base,
+      blocks: [
+        { startQ: 1, count: 10, x: 0.12, y: 0.37, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+        { startQ: 11, count: 10, x: 0.43, y: 0.37, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+        { startQ: 21, count: 10, x: 0.73, y: 0.37, w: 0.23, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+      ],
+    }
+  }
+
+  if (normalizedTotal === 35) {
+    return {
+      ...base,
+      blocks: [
+        { startQ: 1, count: 10, x: 0.12, y: 0.37, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+        { startQ: 11, count: 10, x: 0.43, y: 0.37, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+        { startQ: 21, count: 10, x: 0.73, y: 0.37, w: 0.23, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+        { startQ: 31, count: 5, x: 0.12, y: 0.64, w: 0.27, h: 0.18, questionColW: 0.1, rowTop: 0, rowBottom: 0.5 },
+      ],
+    }
+  }
+
+  return {
+    ...base,
+    blocks: [
+      { startQ: 1, count: 10, x: 0.12, y: 0.37, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+      { startQ: 11, count: 10, x: 0.43, y: 0.37, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+      { startQ: 21, count: 10, x: 0.73, y: 0.37, w: 0.23, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+      { startQ: 31, count: 10, x: 0.12, y: 0.64, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+      { startQ: 41, count: 10, x: 0.43, y: 0.64, w: 0.27, h: 0.32, questionColW: 0.1, rowTop: 0, rowBottom: 1 },
+    ],
+  }
 }
 
 // Camera / file
@@ -914,8 +997,19 @@ const loadingSavedResultLinks = ref(false)
 const saveFailures = ref([])
 const retryingSaves = ref(false)
 const saveSuccessMessage = ref('')
+const showResultPreviewModal = ref(false)
+const resultPreviewSrc = ref(null)
+const resultPreviewZoom = ref(1)
+const resultPreviewViewportRef = ref(null)
+const resultPreviewPan = reactive({
+  active: false,
+  startX: 0,
+  startY: 0,
+  startScrollLeft: 0,
+  startScrollTop: 0,
+})
 const scanRotation = ref(0)
-const scanCalibration = reactive(cloneCalibration(DEFAULT_SCAN_CALIBRATION))
+const scanCalibration = reactive(cloneCalibration(buildDefaultScanCalibration(questionTotal.value)))
 const selectedCalibrationBlockIndex = ref(0)
 const calibrationStep = ref(0.01)
 const calibrationZoom = ref(1.25)
@@ -953,7 +1047,7 @@ const showAnswerKeyModal = ref(false)
 const savingKey = ref(false)
 const newKey = reactive({
   name: '',
-  answers: Array(QUESTION_TOTAL).fill(''),
+  answers: Array(questionTotal.value).fill(''),
 })
 const answerInputRefs = ref([])
 
@@ -990,6 +1084,13 @@ onMounted(async () => {
   await loadAnswerKeys()
   await loadAcademicData()
   await loadSavedResultLinks()
+})
+
+watch(selectedQuestionTotal, async () => {
+  newKey.answers = Array(questionTotal.value).fill('')
+  answerInputRefs.value = []
+  selectedCalibrationBlockIndex.value = 0
+  await loadCalibrationDefaults()
 })
 
 // ─── File Handling ────────────────────────────────────────────────────────────
@@ -1057,7 +1158,7 @@ async function doScan() {
   try {
     const fd = new FormData()
     fd.append('file', previewFile.value)
-    fd.append('total', String(QUESTION_TOTAL))
+    fd.append('total', String(questionTotal.value))
     fd.append('rotation', String(scanRotation.value || 0))
     fd.append('calibration', JSON.stringify(scanCalibration))
     if (selectedAnswerKeyId.value) fd.append('answerKeyId', selectedAnswerKeyId.value)
@@ -1089,7 +1190,7 @@ async function doScanBulk() {
   try {
     const fd = new FormData()
     uploadFiles.value.forEach(f => fd.append('files', f))
-    fd.append('total', String(QUESTION_TOTAL))
+    fd.append('total', String(questionTotal.value))
     fd.append('rotation', String(scanRotation.value || 0))
     fd.append('calibration', JSON.stringify(scanCalibration))
     if (selectedAnswerKeyId.value) fd.append('answerKeyId', selectedAnswerKeyId.value)
@@ -1133,7 +1234,7 @@ async function doHardwareScan() {
   try {
     const fd = new FormData()
     fd.append('deviceId', selectedScannerId.value)
-    fd.append('total', String(QUESTION_TOTAL))
+    fd.append('total', String(questionTotal.value))
     fd.append('rotation', String(scanRotation.value || 0))
     fd.append('calibration', JSON.stringify(scanCalibration))
     if (selectedAnswerKeyId.value) fd.append('answerKeyId', selectedAnswerKeyId.value)
@@ -1403,9 +1504,13 @@ async function saveNewAnswerKey() {
   }
   savingKey.value = true
   try {
-    await ocrSaveAnswerKey({ name: newKey.name, answers: newKey.answers, total: QUESTION_TOTAL })
+    await ocrSaveAnswerKey({
+      name: newKey.name,
+      answers: newKey.answers.slice(0, questionTotal.value),
+      total: questionTotal.value,
+    })
     newKey.name = ''
-    newKey.answers = Array(QUESTION_TOTAL).fill('')
+    newKey.answers = Array(questionTotal.value).fill('')
     await loadAnswerKeys()
   } catch (err) {
     alert(err.response?.data?.message || 'Gagal menyimpan kunci jawaban')
@@ -1478,7 +1583,7 @@ function cloneCalibration(source) {
 }
 
 function applyCalibration(calibration) {
-  const base = cloneCalibration(DEFAULT_SCAN_CALIBRATION)
+  const base = cloneCalibration(buildDefaultScanCalibration(questionTotal.value))
   const incoming = calibration && typeof calibration === 'object' ? calibration : {}
 
   scanCalibration.markedThreshold = Number.isFinite(Number(incoming.markedThreshold)) ? Number(incoming.markedThreshold) : base.markedThreshold
@@ -1511,6 +1616,90 @@ function zoomOutCalibration() {
 
 function setCalibrationZoom(value) {
   calibrationZoom.value = Number(clamp(Number(value) || 1, 1, 5).toFixed(2))
+}
+
+function openResultPreview(src) {
+  if (!src) return
+  resultPreviewSrc.value = src
+  resultPreviewZoom.value = 1
+  resultPreviewPan.active = false
+  showResultPreviewModal.value = true
+  requestAnimationFrame(() => {
+    const viewport = resultPreviewViewportRef.value
+    if (!viewport) return
+    viewport.scrollLeft = 0
+    viewport.scrollTop = 0
+  })
+}
+
+function closeResultPreview() {
+  showResultPreviewModal.value = false
+  resultPreviewPan.active = false
+}
+
+function zoomInResultPreview() {
+  resultPreviewZoom.value = Number(clamp(resultPreviewZoom.value + 0.25, 0.5, 4).toFixed(2))
+}
+
+function zoomOutResultPreview() {
+  resultPreviewZoom.value = Number(clamp(resultPreviewZoom.value - 0.25, 0.5, 4).toFixed(2))
+}
+
+function onResultPreviewWheel(event) {
+  const oldZoom = Number(resultPreviewZoom.value) || 1
+  const delta = event.deltaY < 0 ? 0.1 : -0.1
+  const newZoom = Number(clamp(oldZoom + delta, 0.5, 4).toFixed(2))
+  if (newZoom === oldZoom) return
+
+  const viewport = resultPreviewViewportRef.value
+  if (!viewport) {
+    resultPreviewZoom.value = newZoom
+    return
+  }
+
+  const rect = viewport.getBoundingClientRect()
+  const pointerOffsetX = event.clientX - rect.left
+  const pointerOffsetY = event.clientY - rect.top
+  const anchorX = viewport.scrollLeft + pointerOffsetX
+  const anchorY = viewport.scrollTop + pointerOffsetY
+  const ratio = newZoom / oldZoom
+
+  resultPreviewZoom.value = newZoom
+
+  requestAnimationFrame(() => {
+    viewport.scrollLeft = anchorX * ratio - pointerOffsetX
+    viewport.scrollTop = anchorY * ratio - pointerOffsetY
+  })
+}
+
+function onResultPreviewPointerDown(event) {
+  const viewport = resultPreviewViewportRef.value
+  if (!viewport) return
+
+  resultPreviewPan.active = true
+  resultPreviewPan.startX = event.clientX
+  resultPreviewPan.startY = event.clientY
+  resultPreviewPan.startScrollLeft = viewport.scrollLeft
+  resultPreviewPan.startScrollTop = viewport.scrollTop
+  viewport.setPointerCapture?.(event.pointerId)
+}
+
+function onResultPreviewPointerMove(event) {
+  if (!resultPreviewPan.active) return
+  const viewport = resultPreviewViewportRef.value
+  if (!viewport) return
+
+  const deltaX = event.clientX - resultPreviewPan.startX
+  const deltaY = event.clientY - resultPreviewPan.startY
+  viewport.scrollLeft = resultPreviewPan.startScrollLeft - deltaX
+  viewport.scrollTop = resultPreviewPan.startScrollTop - deltaY
+}
+
+function onResultPreviewPointerUp(event) {
+  if (!resultPreviewPan.active) return
+  const viewport = resultPreviewViewportRef.value
+  viewport?.releasePointerCapture?.(event.pointerId)
+  resultPreviewPan.active = false
 }
 
 function calibrationBlockStyle(block, idx) {
@@ -1681,15 +1870,15 @@ function nudgeBlock(field, direction) {
 
 async function loadCalibrationDefaults() {
   try {
-    const res = await ocrGetCalibration()
+    const res = await ocrGetCalibration({ total: questionTotal.value })
     applyCalibration(res.data?.calibration || res.data)
   } catch {
-    applyCalibration(DEFAULT_SCAN_CALIBRATION)
+    applyCalibration(buildDefaultScanCalibration(questionTotal.value))
   }
 }
 
 function resetCalibration() {
-  applyCalibration(DEFAULT_SCAN_CALIBRATION)
+  applyCalibration(buildDefaultScanCalibration(questionTotal.value))
   scanRotation.value = 0
 }
 
@@ -1703,7 +1892,7 @@ function buildAnswersFromResult(result, scoreObj) {
   const details = scoreObj?.details && typeof scoreObj.details === 'object' ? scoreObj.details : {}
   const maxFromParsed = Object.keys(parsed).reduce((m, k) => Math.max(m, Number(k) || 0), 0)
   const maxFromDetails = Object.keys(details).reduce((m, k) => Math.max(m, Number(k) || 0), 0)
-  const total = Math.max(QUESTION_TOTAL, maxFromParsed, maxFromDetails)
+  const total = Math.max(questionTotal.value, maxFromParsed, maxFromDetails)
 
   return Array.from({ length: total }, (_, idx) => {
     const qn = idx + 1
@@ -1721,7 +1910,7 @@ function normalizeScanResult(result) {
   const score = toNumberOrNull(scoreRaw)
   const correct = toNumberOrNull(scoreObj?.correct ?? result?.correct) ?? 0
   const wrong = toNumberOrNull(scoreObj?.wrong ?? result?.wrong) ?? 0
-  const total = toNumberOrNull(scoreObj?.total ?? result?.total) ?? QUESTION_TOTAL
+  const total = toNumberOrNull(scoreObj?.total ?? result?.total) ?? questionTotal.value
   const blank = toNumberOrNull(result?.blank) ?? Math.max(0, total - correct - wrong)
   const answers = buildAnswersFromResult(result, scoreObj)
 
