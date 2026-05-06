@@ -116,6 +116,13 @@
             </select>
           </div>
           <div>
+            <label class="text-[11px] uppercase tracking-wide text-gray-400">Pilihan Opsi</label>
+            <select v-model="selectedOptionChoices" class="mt-1 w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5">
+              <option value="ABCD">A-D</option>
+              <option value="ABCDE">A-E</option>
+            </select>
+          </div>
+          <div>
             <label class="text-[11px] uppercase tracking-wide text-gray-400">Rotasi</label>
             <select v-model.number="scanRotation" class="mt-1 w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5">
               <option :value="0">0°</option>
@@ -205,7 +212,7 @@
               </div>
             </div>
             <p class="text-[11px] text-gray-500">
-              Cara kalibrasi cepat: drag blok untuk geser area, titik merah untuk resize, garis teal vertikal untuk atur kolom jawaban, garis teal horizontal untuk atur baris soal, dan garis split kuning untuk atur batas nomor soal vs opsi A-E.
+              Cara kalibrasi cepat: drag blok untuk geser area, titik merah untuk resize, garis teal vertikal untuk atur kolom jawaban, garis teal horizontal untuk atur baris soal, dan garis split kuning untuk atur batas nomor soal vs opsi {{ selectedOptionLabels.join('/') }}.
             </p>
 
             <div v-if="calibrationImageSrc" class="rounded-lg border border-gray-200 bg-white overflow-auto max-h-[78vh] lg:max-h-[82vh]">
@@ -703,11 +710,7 @@
                   class="mt-1 w-full rounded border border-gray-200 bg-white px-1 py-0.5 text-[11px] font-semibold text-gray-700"
                 >
                   <option value="">-</option>
-                  <option value="A">A</option>
-                  <option value="B">B</option>
-                  <option value="C">C</option>
-                  <option value="D">D</option>
-                  <option value="E">E</option>
+                  <option v-for="label in activeOptionLabels" :key="label" :value="label">{{ label }}</option>
                 </select>
               </div>
             </div>
@@ -886,13 +889,13 @@
                 <input v-model="newKey.name" placeholder="Nama (misal: UTS Kelas 6)"
                   class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
                 <div class="space-y-2">
-                  <p class="text-xs text-gray-500">Jawaban soal 1–{{ questionTotal }} (A/B/C/D/E)</p>
+                  <p class="text-xs text-gray-500">Jawaban soal 1–{{ questionTotal }} ({{ selectedOptionLabels.join('/') }})</p>
                   <div class="grid grid-cols-5 gap-1.5">
                     <div v-for="n in questionTotal" :key="n" class="space-y-0.5">
                       <div class="text-[10px] text-gray-400 text-center">{{ n }}</div>
                       <input v-model="newKey.answers[n-1]"
                         maxlength="1"
-                        @input="e => { newKey.answers[n-1] = e.target.value.toUpperCase(); if(e.target.value && n < questionTotal) focusNext(n); }"
+                        @input="e => onAnswerKeyInput(n, e)"
                         :ref="el => { if(el) answerInputRefs[n-1] = el }"
                         class="w-full text-center text-sm font-bold border border-gray-200 rounded-lg py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary uppercase" />
                     </div>
@@ -988,6 +991,15 @@ const scanModes = [
 const QUESTION_LAYOUTS = [30, 35, 50]
 const selectedQuestionTotal = ref(50)
 const questionTotal = computed(() => selectedQuestionTotal.value)
+const selectedOptionChoices = ref('ABCDE')
+
+function normalizeOptionChoices(value) {
+  return String(value || '').toUpperCase() === 'ABCD' ? 'ABCD' : 'ABCDE'
+}
+
+function getOptionLabels(optionChoices) {
+  return normalizeOptionChoices(optionChoices).split('')
+}
 
 function buildDefaultScanCalibration(total) {
   const normalizedTotal = Number(total) === 30 || Number(total) === 35 || Number(total) === 50 ? Number(total) : 35
@@ -1132,13 +1144,14 @@ const selectedClassStudents = ref([])
 const selectedLessonObj = computed(() => lessons.value.find(l => Number(l.id) === Number(selectedLessonId.value)) || null)
 const selectedClassObj = computed(() => classes.value.find(k => Number(k.id) === Number(selectedClassId.value)) || null)
 const selectedTeacherObj = computed(() => teachers.value.find(t => Number(t.id) === Number(selectedTeacherId.value)) || null)
+const selectedOptionLabels = computed(() => getOptionLabels(selectedOptionChoices.value))
+const activeOptionLabels = computed(() => getOptionLabels(lastResult.value?.optionChoices || selectedOptionChoices.value))
 const selectedCalibrationBlock = computed(() => scanCalibration.blocks?.[selectedCalibrationBlockIndex.value] || null)
 const calibrationImageSrc = computed(() => previewSrc.value || lastResult?.value?.debug?.sourceImage || lastResultPreview.value || lastResult?.value?.previewUrl || null)
 const calibrationStageStyle = computed(() => ({ width: `${Math.max(1, Number(calibrationZoom.value) || 1) * 100}%`, minWidth: '100%' }))
 const calibrationGlobalCols = 12
 const calibrationGlobalRows = 12
-const calibrationBlockCols = 5
-const CALIBRATION_OPTION_LABELS = ['A', 'B', 'C', 'D', 'E']
+const calibrationBlockCols = computed(() => selectedOptionLabels.value.length)
 
 function buildUniformBands(segmentCount) {
   const safeCount = Math.max(1, Number(segmentCount) || 1)
@@ -1172,7 +1185,7 @@ function sanitizeGuideBands(inputBands, segmentCount, minGap = 0.02) {
 }
 
 function getBlockOptionBands(block) {
-  return sanitizeGuideBands(block?.optionBands, calibrationBlockCols, 0.04)
+  return sanitizeGuideBands(block?.optionBands, calibrationBlockCols.value, 0.04)
 }
 
 function getBlockRowBands(block) {
@@ -1205,7 +1218,7 @@ function getBlockSplitRatio(block) {
 
 function getBlockColLabelCenters(block) {
   const bands = getBlockOptionBands(block)
-  return CALIBRATION_OPTION_LABELS.map((label, colIndex) => {
+  return selectedOptionLabels.value.map((label, colIndex) => {
     const localMid = (Number(bands[colIndex]) + Number(bands[colIndex + 1])) / 2
     return {
       label,
@@ -1253,6 +1266,13 @@ watch(selectedQuestionTotal, async () => {
   newKey.answers = Array(questionTotal.value).fill('')
   answerInputRefs.value = []
   selectedCalibrationBlockIndex.value = 0
+  await loadCalibrationDefaults()
+})
+
+watch(selectedOptionChoices, async (value) => {
+  selectedOptionChoices.value = normalizeOptionChoices(value)
+  answerInputRefs.value = []
+  newKey.answers = newKey.answers.map((answer) => sanitizeAnswerChoice(answer))
   await loadCalibrationDefaults()
 })
 
@@ -1322,8 +1342,9 @@ async function doScan() {
     const fd = new FormData()
     fd.append('file', previewFile.value)
     fd.append('total', String(questionTotal.value))
+    fd.append('optionChoices', normalizeOptionChoices(selectedOptionChoices.value))
     fd.append('rotation', String(scanRotation.value || 0))
-    fd.append('calibration', JSON.stringify(scanCalibration))
+    fd.append('calibration', JSON.stringify({ ...scanCalibration, optionChoices: normalizeOptionChoices(selectedOptionChoices.value) }))
     if (selectedAnswerKeyId.value) fd.append('answerKeyId', selectedAnswerKeyId.value)
     if (selectedLessonId.value) fd.append('lessonId', selectedLessonId.value)
     if (selectedClassId.value) fd.append('kelasId', selectedClassId.value)
@@ -1354,8 +1375,9 @@ async function doScanBulk() {
     const fd = new FormData()
     uploadFiles.value.forEach(f => fd.append('files', f))
     fd.append('total', String(questionTotal.value))
+    fd.append('optionChoices', normalizeOptionChoices(selectedOptionChoices.value))
     fd.append('rotation', String(scanRotation.value || 0))
-    fd.append('calibration', JSON.stringify(scanCalibration))
+    fd.append('calibration', JSON.stringify({ ...scanCalibration, optionChoices: normalizeOptionChoices(selectedOptionChoices.value) }))
     if (selectedAnswerKeyId.value) fd.append('answerKeyId', selectedAnswerKeyId.value)
     if (selectedLessonId.value) fd.append('lessonId', selectedLessonId.value)
     if (selectedClassId.value) fd.append('kelasId', selectedClassId.value)
@@ -1398,8 +1420,9 @@ async function doHardwareScan() {
     const fd = new FormData()
     fd.append('deviceId', selectedScannerId.value)
     fd.append('total', String(questionTotal.value))
+    fd.append('optionChoices', normalizeOptionChoices(selectedOptionChoices.value))
     fd.append('rotation', String(scanRotation.value || 0))
-    fd.append('calibration', JSON.stringify(scanCalibration))
+    fd.append('calibration', JSON.stringify({ ...scanCalibration, optionChoices: normalizeOptionChoices(selectedOptionChoices.value) }))
     if (selectedAnswerKeyId.value) fd.append('answerKeyId', selectedAnswerKeyId.value)
     if (selectedLessonId.value) fd.append('lessonId', selectedLessonId.value)
     if (selectedClassId.value) fd.append('kelasId', selectedClassId.value)
@@ -1669,8 +1692,9 @@ async function saveNewAnswerKey() {
   try {
     await ocrSaveAnswerKey({
       name: newKey.name,
-      answers: newKey.answers.slice(0, questionTotal.value),
+      answers: newKey.answers.slice(0, questionTotal.value).map((answer) => sanitizeAnswerChoice(answer)).map((answer) => answer || ''),
       total: questionTotal.value,
+      optionChoices: normalizeOptionChoices(selectedOptionChoices.value),
     })
     newKey.name = ''
     newKey.answers = Array(questionTotal.value).fill('')
@@ -1696,6 +1720,22 @@ async function deleteAnswerKey(id) {
 function focusNext(n) {
   const next = answerInputRefs.value[n]
   if (next) next.focus()
+}
+
+function sanitizeAnswerChoice(value, optionChoices = selectedOptionChoices.value) {
+  const normalized = String(value || '').toUpperCase()
+  return getOptionLabels(optionChoices).includes(normalized) ? normalized : ''
+}
+
+function onAnswerKeyInput(n, event) {
+  const sanitized = sanitizeAnswerChoice(event?.target?.value)
+  newKey.answers[n - 1] = sanitized
+  if (event?.target) {
+    event.target.value = sanitized
+  }
+  if (sanitized && n < questionTotal.value) {
+    focusNext(n)
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1748,7 +1788,9 @@ function cloneCalibration(source) {
 function applyCalibration(calibration) {
   const base = cloneCalibration(buildDefaultScanCalibration(questionTotal.value))
   const incoming = calibration && typeof calibration === 'object' ? calibration : {}
+  const optionChoices = normalizeOptionChoices(incoming.optionChoices || selectedOptionChoices.value)
 
+  scanCalibration.optionChoices = optionChoices
   scanCalibration.markedThreshold = Number.isFinite(Number(incoming.markedThreshold)) ? Number(incoming.markedThreshold) : base.markedThreshold
   scanCalibration.confidenceGap = Number.isFinite(Number(incoming.confidenceGap)) ? Number(incoming.confidenceGap) : base.confidenceGap
   scanCalibration.questionColW = Number.isFinite(Number(incoming.questionColW)) ? Number(incoming.questionColW) : base.questionColW
@@ -1763,7 +1805,7 @@ function applyCalibration(calibration) {
       ...block,
       ...src,
       count: safeCount,
-      optionBands: sanitizeGuideBands(src.optionBands ?? block.optionBands, calibrationBlockCols, 0.04),
+      optionBands: sanitizeGuideBands(src.optionBands ?? block.optionBands, calibrationBlockCols.value, 0.04),
       rowBands: sanitizeGuideBands(src.rowBands ?? block.rowBands, safeCount, 0.02),
     }
   })
@@ -2002,7 +2044,7 @@ function onManualAnswerChange(result, answerIndex, value) {
   if (!result || !Array.isArray(result.answers) || !result.answers[answerIndex]) return
 
   const normalized = String(value || '').toUpperCase()
-  const detected = /^[ABCDE]$/.test(normalized) ? normalized : null
+  const detected = sanitizeAnswerChoice(normalized, result?.optionChoices || selectedOptionChoices.value) || null
   result.answers[answerIndex].detected = detected
 
   const parsedAnswers = {}
@@ -2164,7 +2206,9 @@ function nudgeBlock(field, direction) {
 
 async function loadCalibrationDefaults() {
   try {
-    const res = await ocrGetCalibration({ total: questionTotal.value })
+    const optionChoices = normalizeOptionChoices(selectedOptionChoices.value)
+    const res = await ocrGetCalibration({ total: questionTotal.value, optionChoices })
+    selectedOptionChoices.value = normalizeOptionChoices(res.data?.optionChoices || optionChoices)
     applyCalibration(res.data?.calibration || res.data)
   } catch {
     applyCalibration(buildDefaultScanCalibration(questionTotal.value))
@@ -2206,6 +2250,7 @@ function normalizeScanResult(result) {
   const wrong = toNumberOrNull(scoreObj?.wrong ?? result?.wrong) ?? 0
   const total = toNumberOrNull(scoreObj?.total ?? result?.total) ?? questionTotal.value
   const blank = toNumberOrNull(result?.blank) ?? Math.max(0, total - correct - wrong)
+  const optionChoices = normalizeOptionChoices(result?.optionChoices || selectedOptionChoices.value)
   const answers = buildAnswersFromResult(result, scoreObj)
 
   return {
@@ -2215,6 +2260,8 @@ function normalizeScanResult(result) {
     correct,
     wrong,
     blank,
+    optionChoices,
+    calibration: result?.calibration ? { ...result.calibration, optionChoices } : result?.calibration,
     answers,
     previewUrl: result?.debug?.overlayImage || result?.debug?.processedImage || result?.debug?.sourceImage || result?.previewUrl || null,
   }
