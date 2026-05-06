@@ -562,6 +562,30 @@
       <line x1="21" y1="14" x2="3" y2="14" />
       <line x1="21" y1="18" x2="7" y2="18" />
     </template>
+
+    <!-- Close / X -->
+    <template v-else-if="name === 'close'">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </template>
+
+    <!-- Scan / OCR -->
+    <template v-else-if="name === 'scan'">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M3 9h18M9 3v18" />
+    </template>
+
+    <!-- Camera -->
+    <template v-else-if="name === 'camera'">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </template>
+
+    <!-- Scanner / Hardware scanner -->
+    <template v-else-if="name === 'scanner'">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3 10h18M8 5V3M16 5V3" />
+    </template>
   </svg>
 </template>
 

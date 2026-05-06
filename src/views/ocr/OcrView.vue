@@ -890,14 +890,25 @@
                   class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
                 <div class="space-y-2">
                   <p class="text-xs text-gray-500">Jawaban soal 1–{{ questionTotal }} ({{ selectedOptionLabels.join('/') }})</p>
-                  <div class="grid grid-cols-5 gap-1.5">
-                    <div v-for="n in questionTotal" :key="n" class="space-y-0.5">
-                      <div class="text-[10px] text-gray-400 text-center">{{ n }}</div>
-                      <input v-model="newKey.answers[n-1]"
-                        maxlength="1"
-                        @input="e => onAnswerKeyInput(n, e)"
-                        :ref="el => { if(el) answerInputRefs[n-1] = el }"
-                        class="w-full text-center text-sm font-bold border border-gray-200 rounded-lg py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary uppercase" />
+                  <div class="max-h-72 overflow-y-auto space-y-1 pr-1">
+                    <div v-for="n in questionTotal" :key="n"
+                      class="flex items-center gap-2 rounded-lg bg-white border border-gray-100 px-2.5 py-1.5">
+                      <span class="text-xs font-semibold text-gray-400 w-6 shrink-0 text-right">{{ n }}</span>
+                      <div class="flex items-center gap-1.5">
+                        <button
+                          v-for="opt in selectedOptionLabels"
+                          :key="opt"
+                          type="button"
+                          @click="newKey.answers[n-1] = (newKey.answers[n-1] === opt ? '' : opt)"
+                          :class="[
+                            'w-8 h-8 rounded-full text-xs font-bold border transition-colors',
+                            newKey.answers[n-1] === opt
+                              ? 'bg-primary text-white border-primary shadow-sm'
+                              : 'bg-white text-gray-500 border-gray-200 hover:border-primary hover:text-primary'
+                          ]">
+                          {{ opt }}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1494,6 +1505,25 @@ async function loadSavedResultLinks() {
   }
 }
 
+function stripResultImages(result) {
+  if (!result || typeof result !== 'object') return result
+  const stripped = { ...result }
+  // Remove all base64/URL image blobs — keep only scored data
+  if (stripped.debug && typeof stripped.debug === 'object') {
+    stripped.debug = {
+      width: stripped.debug.width,
+      height: stripped.debug.height,
+    }
+  }
+  delete stripped.previewUrl
+  // metaContext images not needed
+  if (stripped.metaContext) {
+    stripped.metaContext = { ...stripped.metaContext }
+    delete stripped.metaContext.students
+  }
+  return stripped
+}
+
 async function saveResultLink(result, source) {
   const ctx = getResultContext(result)
   const idempotencyKey = buildIdempotencyKey(result, source, ctx)
@@ -1505,7 +1535,7 @@ async function saveResultLink(result, source) {
     correct: result?.correct ?? null,
     wrong: result?.wrong ?? null,
     blank: result?.blank ?? null,
-    raw_result: result || null,
+    raw_result: stripResultImages(result),
     lesson_type: lessonType.value,
     lesson_id: ctx.lessonId || null,
     kelas_id: ctx.classId || null,
