@@ -4,7 +4,7 @@
        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
     </div>
     
-    <div v-else class="space-y-4">
+    <form v-else class="space-y-4" @submit.prevent="saveAttendance">
         <!-- Header Info -->
         <div class="bg-blue-50 p-4 rounded-lg flex flex-col md:flex-row justify-between gap-4 text-sm">
             <div>
@@ -130,14 +130,17 @@
         </div>
         
         <!-- Footer -->
+                <div v-if="formError" class="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                        {{ formError }}
+                </div>
         <div class="flex justify-end gap-3 pt-2 border-t mt-4">
              <button type="button" class="btn-secondary" @click="$emit('close')">Batal</button>
-             <button type="button" class="btn-primary" @click="saveAttendance" :disabled="submitting">
+                         <button type="submit" class="btn-primary" :disabled="submitting || !students.length">
                 <span v-if="submitting">Menyimpan...</span>
                 <span v-else>Simpan Absensi</span>
              </button>
         </div>
-    </div>
+        </form>
   </Modal>
 </template>
 
@@ -170,6 +173,7 @@ const loading = ref(true);
 const submitting = ref(false);
 const students = ref([]);
 const date = ref(props.date);
+const formError = ref('');
 
 // Derived Info
 const scheduleName = computed(() => {
@@ -199,6 +203,7 @@ const teacherName = computed(() => {
 const loadAttendance = async () => {
     if (!props.schedule) return;
     loading.value = true;
+    formError.value = '';
     try {
         const data = await store.fetchAttendance(props.schedule.id, date.value, props.type);
         // Map response to local state for editing
@@ -240,9 +245,18 @@ const statusColor = (status) => {
 };
 
 const saveAttendance = async () => {
+    formError.value = '';
+
+    if (!students.value.length) {
+        formError.value = 'Tidak ada data santri untuk disimpan';
+        toast.error(formError.value);
+        return;
+    }
+
     const missingStatus = students.value.some(s => !s.status);
     if (missingStatus) {
-        toast.error('Status absensi wajib dipilih untuk semua santri');
+        formError.value = 'Status absensi wajib dipilih untuk semua santri';
+        toast.error(formError.value);
         return;
     }
 
@@ -263,6 +277,8 @@ const saveAttendance = async () => {
         emit('close');
     } catch (e) {
         console.error(e);
+        formError.value = e?.response?.data?.error || 'Gagal menyimpan absensi';
+        toast.error(formError.value);
     } finally {
         submitting.value = false;
     }

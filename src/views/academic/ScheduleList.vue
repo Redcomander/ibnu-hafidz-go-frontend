@@ -171,7 +171,7 @@ const handleScheduleSubmit = async (formData) => {
 const canAccessStudentAbsensi = (item) => {
     if (isSuperAdmin.value || isAdmin.value || isStaff.value) return true;
     const isAssigned = authStore.user?.id === item.assignment?.teacher?.id;
-    const isSubstitute = authStore.user?.id === item.substitute_teacher?.id;
+    const isSubstitute = authStore.user?.id === item.substitute_teacher?.id && isSubstituteActive(item);
     if (!isAssigned && !isSubstitute) return false;
     const isToday = dayjs().isSame(dayjs(selectedDate.value), 'day');
     if (!isToday || todayName.value !== item.day) return false;
