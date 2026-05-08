@@ -518,6 +518,7 @@ const navItems = [
     label: "Scanner Lembar Jawab",
     permission: "dashboard.view",
     activeOn: ["/dashboard/ocr"],
+    activeExcept: ["/dashboard/ocr/results"],
     menuKey: 'ocr_scanner',
   },
   {

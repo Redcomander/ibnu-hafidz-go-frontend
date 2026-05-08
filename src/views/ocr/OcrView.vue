@@ -857,7 +857,18 @@
               <div v-for="item in group.results.slice(0, 8)" :key="item.id"
                 class="flex items-center justify-between rounded-md border border-gray-100 bg-white px-2.5 py-1.5 text-sm">
                 <span class="truncate text-gray-700">{{ item.filename || `${item.source || 'scan'} #${item.id}` }}</span>
-                <span class="font-semibold text-gray-800">{{ item.score ?? '–' }}</span>
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-gray-800">{{ item.score ?? '–' }}</span>
+                  <button
+                    type="button"
+                    @click="deleteSavedResultLink(item)"
+                    :disabled="deletingResultLinkId === item.id"
+                    class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                    title="Hapus riwayat scan"
+                  >
+                    <SvgIcon name="trash" :size="13" />
+                  </button>
+                </div>
               </div>
             </div>
           </details>
@@ -989,7 +1000,7 @@ import api from '@/api'
 import {
   ocrHealth, ocrScan, ocrScanBulk, ocrScanHardware,
   ocrScannerDevices, ocrGetAnswerKeys, ocrSaveAnswerKey, ocrDeleteAnswerKey, ocrGetCalibration,
-  ocrGetResultLinks, ocrCreateResultLink,
+  ocrGetResultLinks, ocrCreateResultLink, ocrDeleteResultLink,
 } from '@/api/ocr.js'
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -1079,6 +1090,7 @@ const lastResult = ref(null)
 const bulkResults = ref([])
 const savedResultLinks = ref([])
 const loadingSavedResultLinks = ref(false)
+const deletingResultLinkId = ref(null)
 const saveFailures = ref([])
 const retryingSaves = ref(false)
 const saveSuccessMessage = ref('')
@@ -1506,6 +1518,24 @@ async function loadSavedResultLinks() {
     savedResultLinks.value = []
   } finally {
     loadingSavedResultLinks.value = false
+  }
+}
+
+async function deleteSavedResultLink(item) {
+  const id = Number(item?.id)
+  if (!Number.isFinite(id) || id <= 0) return
+  const ok = window.confirm(`Hapus riwayat scan #${id}?`)
+  if (!ok) return
+
+  deletingResultLinkId.value = id
+  scanError.value = null
+  try {
+    await ocrDeleteResultLink(id)
+    savedResultLinks.value = savedResultLinks.value.filter((row) => Number(row?.id) !== id)
+  } catch (err) {
+    scanError.value = err.response?.data?.message || 'Gagal menghapus riwayat scan'
+  } finally {
+    deletingResultLinkId.value = null
   }
 }
 
