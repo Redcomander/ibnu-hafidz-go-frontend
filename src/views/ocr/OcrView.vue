@@ -1510,22 +1510,40 @@ async function loadSavedResultLinks() {
 }
 
 function stripResultImages(result) {
-  if (!result || typeof result !== 'object') return result
-  const stripped = { ...result }
-  // Remove all base64/URL image blobs — keep only scored data
-  if (stripped.debug && typeof stripped.debug === 'object') {
-    stripped.debug = {
-      width: stripped.debug.width,
-      height: stripped.debug.height,
-    }
+  if (!result || typeof result !== 'object') return null
+
+  const compactAnswers = {}
+  if (Array.isArray(result.answers)) {
+    result.answers.forEach((item, idx) => {
+      const detected = String(item?.detected || '').toUpperCase()
+      if (detected) compactAnswers[String(idx + 1)] = detected
+    })
+  } else if (result.parsedAnswers && typeof result.parsedAnswers === 'object') {
+    Object.entries(result.parsedAnswers).forEach(([key, value]) => {
+      const detected = String(value || '').toUpperCase()
+      if (detected) compactAnswers[String(key)] = detected
+    })
   }
-  delete stripped.previewUrl
-  // metaContext images not needed
-  if (stripped.metaContext) {
-    stripped.metaContext = { ...stripped.metaContext }
-    delete stripped.metaContext.students
+
+  const missing = Array.isArray(result.missing)
+    ? result.missing.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0 && n <= 1000)
+    : []
+
+  // Keep only minimal, serializable fields needed for audit/history.
+  return {
+    version: 1,
+    method: result.method || null,
+    rotation: toNumberOrNull(result.rotation),
+    optionChoices: normalizeOptionChoices(result.optionChoices || selectedOptionChoices.value),
+    score: {
+      score: toNumberOrNull(result.score),
+      correct: toNumberOrNull(result.correct),
+      wrong: toNumberOrNull(result.wrong),
+      blank: toNumberOrNull(result.blank),
+    },
+    answers: compactAnswers,
+    missing,
   }
-  return stripped
 }
 
 async function saveResultLink(result, source) {
