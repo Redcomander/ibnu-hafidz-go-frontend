@@ -1549,20 +1549,21 @@ function stripResultImages(result) {
 async function saveResultLink(result, source) {
   const ctx = getResultContext(result)
   const idempotencyKey = buildIdempotencyKey(result, source, ctx)
+  const scoreValue = toNumberOrNull(result?.score)
   const payload = {
     source,
     idempotency_key: idempotencyKey,
     filename: result?.filename || result?.fileName || null,
-    score: result?.score ?? null,
-    correct: result?.correct ?? null,
-    wrong: result?.wrong ?? null,
-    blank: result?.blank ?? null,
+    score: scoreValue,
+    correct: toPositiveIntOrNull(result?.correct),
+    wrong: toPositiveIntOrNull(result?.wrong),
+    blank: toPositiveIntOrNull(result?.blank),
     raw_result: stripResultImages(result),
     lesson_type: lessonType.value,
-    lesson_id: ctx.lessonId || null,
-    kelas_id: ctx.classId || null,
-    teacher_id: ctx.teacherId || null,
-    answer_key_id: selectedAnswerKeyId.value || null,
+    lesson_id: toPositiveIntOrNull(ctx.lessonId),
+    kelas_id: toPositiveIntOrNull(ctx.classId),
+    teacher_id: toPositiveIntOrNull(ctx.teacherId),
+    answer_key_id: toPositiveIntOrNull(selectedAnswerKeyId.value),
   }
 
   try {
@@ -2284,6 +2285,13 @@ function resetCalibration() {
 function toNumberOrNull(value) {
   const n = Number(value)
   return Number.isFinite(n) ? n : null
+}
+
+function toPositiveIntOrNull(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return null
+  const normalized = Math.trunc(n)
+  return normalized > 0 ? normalized : null
 }
 
 function buildAnswersFromResult(result, scoreObj) {
